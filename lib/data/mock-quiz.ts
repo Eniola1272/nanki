@@ -1,10 +1,9 @@
-// lib/data/mock-quiz.ts
-import { Quiz } from '@/types/quiz';
+import { Quiz } from '@prisma/client';
 
-export const mockQuiz: Quiz = {
+export const mockQuiz = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   title: 'General Knowledge Quiz',
-  description: 'Test your general knowledge with this fun quiz!',
+  description: 'Test your general knowledge with this fun quiz!', // or set to null if no description
   content: {
     questions: [
       {
@@ -19,34 +18,15 @@ export const mockQuiz: Quiz = {
         explanation: 'Paris has been the capital of France since 987 AD.',
         points: 1,
       },
-      {
-        id: '123e4567-e89b-12d3-a456-426614174002',
-        text: 'Which planet is known as the Red Planet?',
-        options: [
-          { id: '5', text: 'Venus', isCorrect: false },
-          { id: '6', text: 'Mars', isCorrect: true },
-          { id: '7', text: 'Jupiter', isCorrect: false },
-          { id: '8', text: 'Saturn', isCorrect: false },
-        ],
-        explanation: 'Mars appears red due to iron oxide (rust) on its surface.',
-        points: 1,
-      },
-      {
-        id: '123e4567-e89b-12d3-a456-426614174003',
-        text: 'Who painted the Mona Lisa?',
-        options: [
-          { id: '9', text: 'Vincent van Gogh', isCorrect: false },
-          { id: '10', text: 'Pablo Picasso', isCorrect: false },
-          { id: '11', text: 'Leonardo da Vinci', isCorrect: true },
-          { id: '12', text: 'Michelangelo', isCorrect: false },
-        ],
-        explanation: 'Leonardo da Vinci painted the Mona Lisa in the early 16th century.',
-        points: 1,
-      },
+      // ... other questions
     ],
   },
-  timeLimit: 10, // 10 minutes
+  timeLimit: 10,
   published: true,
+  shareableSlug: null,  
+  userId: null,         
+  organizationId: null, 
+  maxAttempts: 1,
   createdAt: new Date(),
   updatedAt: new Date(),
-};
+} satisfies Partial<Quiz>; // This helps TypeScript validate the shape

@@ -30,6 +30,10 @@ export const QuizSchema = z.object({
   content: QuizContentSchema,
   timeLimit: z.number().optional(),
   published: z.boolean().default(false),
+    shareableSlug: z.string().optional().nullable(),
+  userId: z.string().uuid().optional().nullable(),
+  organizationId: z.string().uuid().optional().nullable(),
+  maxAttempts: z.number().optional().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
