@@ -1,7 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
+import { ReactNode, useEffect, useState } from 'react';
+import { createClient } from '@/lib/db/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,14 +21,36 @@ interface PremiumGuardProps {
 }
 
 export function PremiumGuard({ children, feature, fallback }: PremiumGuardProps) {
-  const { data: session, status } = useSession();
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const supabase = createClient();
 
-  if (status === 'loading') {
+  useEffect(() => {
+    const checkPremium = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        const profile = data as { is_premium: boolean } | null;
+        setIsPremium(profile?.is_premium ?? false);
+      } else {
+        setIsPremium(false);
+      }
+      setLoading(false);
+    };
+
+    checkPremium();
+  }, []);
+
+  if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (session?.user?.isPremium) {
+  if (isPremium) {
     return <>{children}</>;
   }
 

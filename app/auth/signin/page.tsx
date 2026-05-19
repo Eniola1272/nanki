@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/db/supabase-browser";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,16 @@ function SignInContent({}: SignInContentProps) {
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const error = searchParams.get("error");
 
+  const handleGoogleSignIn = async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
+      },
+    });
+  };
+
   return (
     <Card className="w-[350px]">
       <CardHeader>
@@ -50,13 +60,11 @@ function SignInContent({}: SignInContentProps) {
       <CardContent className="flex flex-col gap-4">
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-            {error === "OAuthSignin" && "Error signing in with Google. Please try again."}
-            {error === "OAuthCallback" && "Error signing in with Google. Please try again."}
-            {error === "AccessDenied" && "Access denied. Please try again."}
+            {error === "AuthError" && "Error signing in with Google. Please try again."}
           </div>
         )}
         <Button
-          onClick={() => signIn("google", { callbackUrl })}
+          onClick={handleGoogleSignIn}
           className="w-full cursor-pointer"
         >
           <GoogleIcon />

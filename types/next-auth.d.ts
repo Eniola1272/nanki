@@ -1,22 +1,19 @@
-import "next-auth";
-import { DefaultSession } from "next-auth";
+/**
+ * Supabase Auth type augmentations.
+ *
+ * The app uses Supabase Auth (not NextAuth). Session/user types
+ * are defined in lib/auth.ts via the AuthSession interface.
+ * This file is kept for reference but no longer augments next-auth.
+ */
 
-declare module "next-auth" {
-  interface User {
-    isPremium: boolean;
-  }
-
-  interface Session {
-    user: {
-      id: string;
-      isPremium: boolean;
-    } & DefaultSession["user"]
-  }
+export interface AppUser {
+  id: string
+  email: string
+  name: string
+  image: string | null
+  isPremium: boolean
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    isPremium: boolean;
-  }
+export interface AppSession {
+  user: AppUser
 }

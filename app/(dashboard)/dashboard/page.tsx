@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db/prisma";
+import { createClient } from "@/lib/db/supabase-server";
 import { Navbar } from "@/components/shared/Navbar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Quiz } from "@prisma/client";
+import type { DbQuiz } from "@/types/database";
 
 // Define props interfaces
 interface WelcomeCardProps {
@@ -14,7 +14,7 @@ interface WelcomeCardProps {
 }
 
 interface RecentQuizzesProps {
-  quizzes: Quiz[];
+  quizzes: DbQuiz[];
 }
 
 function WelcomeCard({ name, email, isPremium }: WelcomeCardProps) {
@@ -41,7 +41,7 @@ function RecentQuizzes({ quizzes }: RecentQuizzesProps) {
             <li key={quiz.id} className="border-b pb-2 flex justify-between">
               <span>{quiz.title}</span>
               <span className="text-sm text-muted-foreground">
-                {new Date(quiz.createdAt).toLocaleDateString()}
+                {new Date(quiz.created_at).toLocaleDateString()}
               </span>
             </li>
           ))}
@@ -65,11 +65,14 @@ export default async function DashboardPage() {
     redirect("/auth/signin");
   }
 
-  const userQuizzes = await prisma.quiz.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('quizzes')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+  const userQuizzes = (data ?? []) as DbQuiz[];
 
   return (
     <>

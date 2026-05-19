@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Quiz } from '@prisma/client';
+import type { DbQuiz } from '@/types/database';
 
 // Define props interface
 interface QuizRunnerProps {
-  quiz: Quiz;
+  quiz: DbQuiz;
   userId?: string;
   isPremium?: boolean;
 }

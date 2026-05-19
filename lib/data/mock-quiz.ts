@@ -1,9 +1,9 @@
-import { Quiz } from '@prisma/client';
+import type { DbQuiz } from '@/types/database';
 
 export const mockQuiz = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   title: 'General Knowledge Quiz',
-  description: 'Test your general knowledge with this fun quiz!', // or set to null if no description
+  description: 'Test your general knowledge with this fun quiz!',
   content: {
     questions: [
       {
@@ -21,12 +21,12 @@ export const mockQuiz = {
       // ... other questions
     ],
   },
-  timeLimit: 10,
+  time_limit: 10,
   published: true,
-  shareableSlug: null,  
-  userId: null,         
-  organizationId: null, 
-  maxAttempts: 1,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-} satisfies Partial<Quiz>; // This helps TypeScript validate the shape
+  shareable_slug: null,
+  user_id: null,
+  organization_id: null,
+  max_attempts: 1,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+} satisfies Partial<DbQuiz>; // This helps TypeScript validate the shape

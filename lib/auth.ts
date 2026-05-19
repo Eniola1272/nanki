@@ -1,34 +1,48 @@
-import NextAuth, { NextAuthConfig } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/lib/db/prisma";
-import { Adapter } from "next-auth/adapters";
+import { createClient } from '@/lib/db/supabase-server'
+import type { Profile } from '@/types/database'
 
-export const authOptions: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma) as Adapter,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
-  callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-        session.user.isPremium = (user as any).isPremium || false;
-      }
-      return session;
+export interface AuthSession {
+  user: {
+    id: string
+    email: string
+    name: string
+    image: string | null
+    isPremium: boolean
+  }
+}
+
+/**
+ * Get the current authenticated user session.
+ * Returns null if not authenticated.
+ * Use this in Server Components, Route Handlers, and Server Actions.
+ */
+export async function auth(): Promise<AuthSession | null> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return null
+  }
+
+  // Fetch the profile for app-specific data (isPremium, etc.)
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+  const profile = data as Profile | null
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email ?? '',
+      name: profile?.name ?? user.user_metadata?.full_name ?? 'User',
+      image: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+      isPremium: profile?.is_premium ?? false,
     },
-  },
-  pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
-  },
-  session: {
-    strategy: "database",
-  },
-  debug: process.env.NODE_ENV === "development",
-};
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+  }
+}
