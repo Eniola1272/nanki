@@ -61,17 +61,6 @@ create table if not exists organizations (
 
 alter table organizations enable row level security;
 
-create policy "Org members can view org"
-  on organizations for select
-  using (
-    owner_id = auth.uid()
-    or exists (
-      select 1 from memberships
-      where memberships.organization_id = organizations.id
-      and memberships.user_id = auth.uid()
-    )
-  );
-
 create policy "Owner can update org"
   on organizations for update
   using (owner_id = auth.uid());
@@ -101,6 +90,18 @@ create policy "Members can view memberships in their org"
       select 1 from memberships m
       where m.organization_id = memberships.organization_id
       and m.user_id = auth.uid()
+    )
+  );
+
+-- Add org visibility policy now that memberships table exists
+create policy "Org members can view org"
+  on organizations for select
+  using (
+    owner_id = auth.uid()
+    or exists (
+      select 1 from memberships
+      where memberships.organization_id = organizations.id
+      and memberships.user_id = auth.uid()
     )
   );
 
