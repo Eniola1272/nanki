@@ -8,6 +8,7 @@ export interface AuthSession {
     name: string
     image: string | null
     isPremium: boolean
+    isAdmin: boolean
   }
 }
 
@@ -43,6 +44,7 @@ export async function auth(): Promise<AuthSession | null> {
       name: profile?.name ?? user.user_metadata?.full_name ?? 'User',
       image: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
       isPremium: profile?.is_premium ?? false,
+      isAdmin: profile?.is_admin ?? false,
     },
   }
 }

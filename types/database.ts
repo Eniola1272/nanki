@@ -24,6 +24,7 @@ export interface Database {
           name: string | null
           avatar_url: string | null
           is_premium: boolean
+          is_admin: boolean
           stripe_customer_id: string | null
           created_at: string
           updated_at: string
@@ -34,6 +35,7 @@ export interface Database {
           name?: string | null
           avatar_url?: string | null
           is_premium?: boolean
+          is_admin?: boolean
           stripe_customer_id?: string | null
           created_at?: string
           updated_at?: string
@@ -44,7 +46,47 @@ export interface Database {
           name?: string | null
           avatar_url?: string | null
           is_premium?: boolean
+          is_admin?: boolean
           stripe_customer_id?: string | null
+          updated_at?: string
+        }
+      }
+      blog_posts: {
+        Row: {
+          id: string
+          title: string
+          slug: string
+          excerpt: string | null
+          content: string
+          cover_image: string | null
+          author_id: string | null
+          published: boolean
+          published_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          slug: string
+          excerpt?: string | null
+          content?: string
+          cover_image?: string | null
+          author_id?: string | null
+          published?: boolean
+          published_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          slug?: string
+          excerpt?: string | null
+          content?: string
+          cover_image?: string | null
+          author_id?: string | null
+          published?: boolean
+          published_at?: string | null
           updated_at?: string
         }
       }
@@ -184,6 +226,7 @@ export interface Database {
 
 // Convenience type aliases
 export type Profile = Database['public']['Tables']['profiles']['Row']
+export type BlogPost = Database['public']['Tables']['blog_posts']['Row']
 export type Organization = Database['public']['Tables']['organizations']['Row']
 export type Membership = Database['public']['Tables']['memberships']['Row']
 export type DbQuiz = Database['public']['Tables']['quizzes']['Row']
