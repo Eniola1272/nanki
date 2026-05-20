@@ -1,10 +1,7 @@
 'use client';
 
-/**
- * App-level providers wrapper.
- * NextAuth SessionProvider has been removed — Supabase Auth handles
- * sessions via cookies and middleware, no client-side provider needed.
- */
+import { NankiProvider } from '@/lib/nanki-store';
+
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <NankiProvider>{children}</NankiProvider>;
 }
