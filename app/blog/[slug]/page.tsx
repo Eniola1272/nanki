@@ -13,20 +13,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('blog_posts')
-    .select('title, excerpt, cover_image')
+    .select('*')
     .eq('slug', slug)
     .eq('published', true)
     .single();
+  const post = data as BlogPost | null;
 
-  if (!data) return { title: 'Post not found — Nanki' };
+  if (!post) return { title: 'Post not found — Nanki' };
 
   return {
-    title: `${data.title} — Nanki Blog`,
-    description: data.excerpt ?? undefined,
+    title: `${post.title} — Nanki Blog`,
+    description: post.excerpt ?? undefined,
     openGraph: {
-      title: data.title,
-      description: data.excerpt ?? undefined,
-      images: data.cover_image ? [data.cover_image] : [],
+      title: post.title,
+      description: post.excerpt ?? undefined,
+      images: post.cover_image ? [post.cover_image] : [],
     },
   };
 }

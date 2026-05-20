@@ -66,16 +66,18 @@ export default function PostForm({ post, authorId }: PostFormProps) {
       updated_at: new Date().toISOString(),
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
     if (isEdit && post) {
-      const { error: err } = await supabase
+      const { error: err } = await db
         .from('blog_posts')
         .update(payload)
         .eq('id', post.id);
       if (err) { setError(err.message); setSaving(false); return; }
     } else {
-      const { error: err } = await supabase
+      const { error: err } = await db
         .from('blog_posts')
-        .insert({ ...payload });
+        .insert(payload);
       if (err) { setError(err.message); setSaving(false); return; }
     }
 

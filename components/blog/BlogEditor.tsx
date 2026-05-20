@@ -85,7 +85,7 @@ export default function BlogEditor({ content, onChange, placeholder = 'Write you
   // When switching back to visual, push htmlSource into editor
   const switchToVisual = useCallback(() => {
     if (editor) {
-      editor.commands.setContent(htmlSource, false);
+      editor.commands.setContent(htmlSource);
       onChange(htmlSource);
     }
     setMode('visual');
@@ -110,7 +110,7 @@ export default function BlogEditor({ content, onChange, placeholder = 'Write you
   // Keep htmlSource in sync with prop changes (e.g., loading existing post)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false);
+      editor.commands.setContent(content);
       setHtmlSource(content);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

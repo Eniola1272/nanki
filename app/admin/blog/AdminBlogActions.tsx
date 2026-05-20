@@ -13,7 +13,9 @@ export default function AdminBlogActions({ post }: { post: BlogPost }) {
   const togglePublish = async () => {
     setLoading(true);
     const supabase = createClient();
-    await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
+    await db
       .from('blog_posts')
       .update({
         published: !post.published,
@@ -28,7 +30,8 @@ export default function AdminBlogActions({ post }: { post: BlogPost }) {
     if (!confirm(`Delete "${post.title}"? This cannot be undone.`)) return;
     setLoading(true);
     const supabase = createClient();
-    await supabase.from('blog_posts').delete().eq('id', post.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('blog_posts').delete().eq('id', post.id);
     router.refresh();
     setLoading(false);
   };
