@@ -50,6 +50,7 @@ export interface Database {
           stripe_customer_id?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       blog_posts: {
         Row: {
@@ -89,6 +90,7 @@ export interface Database {
           published_at?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       organizations: {
         Row: {
@@ -119,6 +121,7 @@ export interface Database {
           stripe_customer_id?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       memberships: {
         Row: {
@@ -140,6 +143,7 @@ export interface Database {
           organization_id?: string
           role?: 'ADMIN' | 'MEMBER' | 'VIEWER'
         }
+        Relationships: []
       }
       quizzes: {
         Row: {
@@ -147,6 +151,8 @@ export interface Database {
           title: string
           description: string | null
           content: Json
+          category: string | null
+          mastered_percentage: number | null
           time_limit: number | null
           published: boolean
           shareable_slug: string | null
@@ -161,6 +167,8 @@ export interface Database {
           title: string
           description?: string | null
           content: Json
+          category?: string | null
+          mastered_percentage?: number | null
           time_limit?: number | null
           published?: boolean
           shareable_slug?: string | null
@@ -174,6 +182,8 @@ export interface Database {
           title?: string
           description?: string | null
           content?: Json
+          category?: string | null
+          mastered_percentage?: number | null
           time_limit?: number | null
           published?: boolean
           shareable_slug?: string | null
@@ -182,6 +192,44 @@ export interface Database {
           max_attempts?: number | null
           updated_at?: string
         }
+        Relationships: []
+      }
+      decks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          category: string | null
+          content: Json
+          user_id: string | null
+          published: boolean
+          shareable_slug: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          category?: string | null
+          content?: Json
+          user_id?: string | null
+          published?: boolean
+          shareable_slug?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          description?: string | null
+          category?: string | null
+          content?: Json
+          user_id?: string | null
+          published?: boolean
+          shareable_slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       quiz_attempts: {
         Row: {
@@ -210,6 +258,7 @@ export interface Database {
           answers?: Json | null
           completed_at?: string | null
         }
+        Relationships: []
       }
     }
     Views: {

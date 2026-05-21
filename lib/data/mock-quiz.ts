@@ -1,6 +1,6 @@
 import type { DbQuiz } from '@/types/database';
 
-export const mockQuiz = {
+export const mockQuiz: DbQuiz = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   title: 'General Knowledge Quiz',
   description: 'Test your general knowledge with this fun quiz!',
@@ -18,9 +18,10 @@ export const mockQuiz = {
         explanation: 'Paris has been the capital of France since 987 AD.',
         points: 1,
       },
-      // ... other questions
     ],
   },
+  category: null,
+  mastered_percentage: null,
   time_limit: 10,
   published: true,
   shareable_slug: null,
@@ -29,4 +30,4 @@ export const mockQuiz = {
   max_attempts: 1,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-} satisfies Partial<DbQuiz>; // This helps TypeScript validate the shape
+};
