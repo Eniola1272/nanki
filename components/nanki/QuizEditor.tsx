@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Quiz, Question } from '@/types/nanki';
+import { OBGYN_QUIZ } from '@/lib/data/obgyn-quiz';
 
 interface QuizEditorProps {
   quiz: Quiz | null;
@@ -9,20 +10,131 @@ interface QuizEditorProps {
   onClose: () => void;
 }
 
+function parseQuestionsFromText(text: string): Question[] {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const parsedQuestions: Question[] = [];
+
+  let currentStem = '';
+  let currentOptions: string[] = [];
+  let currentCorrectIdx = 0;
+  let hasSetCorrect = false;
+
+  const flushQuestion = () => {
+    if (currentStem && currentOptions.length >= 2) {
+      const qId = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `q-${Date.now()}-${parsedQuestions.length}`;
+
+      parsedQuestions.push({
+        id: qId,
+        text: currentStem,
+        timer: '30s',
+        options: currentOptions.slice(0, 6),
+        correctOptionIndex: currentCorrectIdx < currentOptions.length ? currentCorrectIdx : 0,
+      });
+    }
+    currentStem = '';
+    currentOptions = [];
+    currentCorrectIdx = 0;
+    hasSetCorrect = false;
+  };
+
+  const optionRegex = /^([A-Fa-f1-6][\.\)\:\-]\s*|\-\s+)(.+)$/;
+  const answerLineRegex = /^(?:Ans(?:wer)?|Correct(?:\s+Option)?)\s*[:\-]?\s*([A-Fa-f1-6])/i;
+  const questionNumberRegex = /^(?:(?:Q|Question)\s*\d+[\.\:\-]?|\d+[\.\)\:\-])\s*(.+)$/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check for "Answer: X" line
+    const ansMatch = line.match(answerLineRegex);
+    if (ansMatch) {
+      const char = ansMatch[1].toUpperCase();
+      let idx = 0;
+      if (/[A-F]/.test(char)) idx = char.charCodeAt(0) - 65;
+      else if (/[1-6]/.test(char)) idx = parseInt(char, 10) - 1;
+      if (idx >= 0 && idx < currentOptions.length) {
+        currentCorrectIdx = idx;
+        hasSetCorrect = true;
+      }
+      continue;
+    }
+
+    // Determine if line looks like an option
+    const isLetterOption = /^[A-Fa-f][\.\)\:\-]\s*/.test(line);
+    const isBulletOption = /^\-\s+/.test(line);
+    const isNumberOption = /^[1-6][\.\)\:\-]\s*/.test(line);
+    const isOptionCandidate = isLetterOption || isBulletOption || (isNumberOption && currentOptions.length > 0 && currentStem.length > 0);
+
+    if (currentStem && isOptionCandidate) {
+      const optMatch = line.match(optionRegex);
+      let optText = optMatch ? optMatch[2].trim() : line.replace(/^[A-Fa-f1-6][\.\)\:\-]\s*/, '').trim();
+      const isMarked = /\*|\(correct\)|\(ans\)|\[x\]/i.test(optText);
+      optText = optText.replace(/\*|\(correct\)|\(ans\)|\[x\]/gi, '').trim();
+
+      if (isMarked && !hasSetCorrect) {
+        currentCorrectIdx = currentOptions.length;
+        hasSetCorrect = true;
+      }
+      if (currentOptions.length < 6) {
+        currentOptions.push(optText);
+      }
+      continue;
+    }
+
+    // Check for explicit Question Numbering (e.g. 1. Question stem...)
+    const qNumMatch = line.match(questionNumberRegex);
+    if (qNumMatch && !isLetterOption) {
+      flushQuestion();
+      currentStem = qNumMatch[1].trim();
+      continue;
+    }
+
+    // If options are already collected and this line looks like a new question stem
+    const isLikelyQuestionStem = /\?$|^(?:The following|Which|Regarding|Features|Concerning|Contraindications|Indications|What|About|There was)/i.test(line);
+    if (currentOptions.length >= 2 && isLikelyQuestionStem) {
+      flushQuestion();
+      currentStem = line;
+      continue;
+    }
+
+    // Stems & option continuation
+    if (!currentStem) {
+      currentStem = line;
+    } else if (currentOptions.length === 0) {
+      currentStem += ' ' + line;
+    } else {
+      currentOptions[currentOptions.length - 1] += ' ' + line;
+    }
+  }
+
+  flushQuestion();
+  return parsedQuestions;
+}
+
 export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
   const [title, setTitle] = useState(quiz?.title || '');
   const [description, setDescription] = useState(quiz?.description || '');
-  const [category, setCategory] = useState(quiz?.category || 'Biology');
+  const [category, setCategory] = useState(quiz?.category || 'Medicine');
   const [questions, setQuestions] = useState<Question[]>(
-    quiz?.questions || [{ id: 'q-initial-1', text: 'What is the powerhouse of the cell?', timer: '20s', options: ['Nucleus', 'Mitochondria', 'Ribosome'], correctOptionIndex: 1 }]
+    quiz?.questions || [{ id: 'q-initial-1', text: 'What is the triad of watery, blood-stained vaginal discharge, abdominal pain, and pelvic mass?', timer: '30s', options: ["Latzko's triad", "Meigs' syndrome", "Fitz-Hugh-Curtis syndrome", "Saint's triad"], correctOptionIndex: 0 }]
   );
 
-  const addQuestion = () => setQuestions(p => [...p, { id: `q-${Date.now()}`, text: '', timer: '20s', options: ['Option 1', 'Option 2'], correctOptionIndex: 0 }]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkText, setBulkText] = useState('');
 
-  const deleteQuestion = (id: string) => { if (questions.length > 1) setQuestions(p => p.filter(q => q.id !== id)); };
+  const generateUuid = () =>
+    typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  const addQuestion = () =>
+    setQuestions(p => [...p, { id: generateUuid(), text: '', timer: '30s', options: ['Option 1', 'Option 2'], correctOptionIndex: 0 }]);
+
+  const deleteQuestion = (id: string) => {
+    if (questions.length > 1) setQuestions(p => p.filter(q => q.id !== id));
+  };
 
   const duplicateQuestion = (q: Question) => {
-    const dup = { ...q, id: `q-dup-${Date.now()}`, options: [...q.options] };
+    const dup = { ...q, id: generateUuid(), options: [...q.options] };
     const idx = questions.findIndex(item => item.id === q.id);
     const updated = [...questions];
     updated.splice(idx + 1, 0, dup);
@@ -49,8 +161,9 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
     }));
 
   const handleSave = () => {
+    const finalId = quiz?.id || generateUuid();
     onSave({
-      id: quiz?.id || `quiz-${Date.now()}`,
+      id: finalId,
       title: title.trim() || 'Untitled Quiz',
       description: description.trim() || 'No description provided.',
       category,
@@ -58,6 +171,31 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
       questions: questions.map(q => ({ ...q, text: q.text.trim() || 'Untitled Question' })),
     });
   };
+
+  const handleApplyBulk = (replace: boolean) => {
+    const parsed = parseQuestionsFromText(bulkText);
+    if (parsed.length === 0) {
+      alert('Could not parse any questions. Please check the format (need question followed by at least 2 options).');
+      return;
+    }
+    if (replace) {
+      setQuestions(parsed);
+    } else {
+      setQuestions(prev => [...prev, ...parsed]);
+    }
+    setShowBulkModal(false);
+    setBulkText('');
+  };
+
+  const handleLoadObgynExam = () => {
+    setTitle(OBGYN_QUIZ.title);
+    setDescription(OBGYN_QUIZ.description);
+    setCategory(OBGYN_QUIZ.category);
+    setQuestions(OBGYN_QUIZ.questions);
+    setShowBulkModal(false);
+  };
+
+  const previewCount = bulkText.trim() ? parseQuestionsFromText(bulkText).length : 0;
 
   return (
     <div className="min-h-screen bg-surface text-on-surface font-sans flex flex-col antialiased pb-20">
@@ -69,14 +207,24 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
             </button>
             <h1 className="font-title-md text-base md:text-lg text-on-surface font-bold">{quiz ? 'Edit Quiz' : 'New Quiz'}</h1>
           </div>
-          <button onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">Save</button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowBulkModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-full text-xs font-bold transition-all cursor-pointer border border-outline-variant hover:border-primary active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">playlist_add</span>
+              <span>Bulk Import</span>
+            </button>
+            <button onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">Save</button>
+          </div>
         </div>
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto pt-20 px-4 flex flex-col gap-6">
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Quiz Title (e.g. Cellular Biology)"
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Quiz Title (e.g. Obstetrics & Gynaecology MCQs)"
               className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 p-0 py-2 font-bold text-on-surface placeholder:text-outline text-lg md:text-2xl transition-colors focus:outline-none" />
             <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Add a short description..." rows={2}
               className="w-full bg-transparent border-0 p-0 text-sm md:text-base text-on-surface-variant placeholder:text-outline focus:outline-none focus:ring-0 resize-none transition-colors" />
@@ -84,7 +232,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
               <span className="text-secondary font-label-md text-xs uppercase tracking-wide">Category:</span>
               <select value={category} onChange={e => setCategory(e.target.value)}
                 className="bg-surface-container-low text-on-surface font-semibold text-xs rounded-lg border-outline-variant px-3 py-1 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer border">
-                {['Biology', 'History', 'Physics', 'Computer Science', 'Languages', 'Math', 'Other'].map(c => <option key={c} value={c}>{c}</option>)}
+                {['Medicine', 'Biology', 'History', 'Physics', 'Computer Science', 'Languages', 'Math', 'Other'].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
@@ -131,11 +279,12 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
                   return (
                     <div key={optIdx} className="flex items-center gap-3 group/opt">
                       <button onClick={() => updateField(q.id, 'correctOptionIndex', optIdx)}
-                        className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors cursor-pointer ${isCorrect ? 'border-tertiary-container bg-tertiary-container text-on-tertiary animate-pulse' : 'border-outline-variant hover:border-outline bg-transparent'}`}>
-                        {isCorrect && <span className="material-symbols-outlined text-[16px] font-bold select-none fill">check</span>}
+                        title={isCorrect ? 'Correct Option (click to change)' : 'Click to mark as correct answer'}
+                        className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all cursor-pointer ${isCorrect ? 'border-primary bg-primary text-on-primary ring-2 ring-primary/30' : 'border-outline-variant hover:border-primary bg-transparent text-transparent'}`}>
+                        <span className="material-symbols-outlined text-[16px] font-bold select-none">{isCorrect ? 'check' : ''}</span>
                       </button>
                       <input type="text" value={option} onChange={e => updateOption(q.id, optIdx, e.target.value)} placeholder={`Option ${optIdx + 1}`}
-                        className={`flex-1 rounded-xl px-3 py-1.5 text-sm transition-all focus:outline-none border ${isCorrect ? 'bg-surface-container-lowest border-tertiary-container focus:border-tertiary-container focus:ring-1 focus:ring-tertiary-fixed' : 'bg-surface-bright border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary-fixed'}`} />
+                        className={`flex-1 rounded-xl px-3 py-1.5 text-sm transition-all focus:outline-none border ${isCorrect ? 'bg-primary/5 border-primary font-medium focus:border-primary focus:ring-1 focus:ring-primary' : 'bg-surface-bright border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary-fixed'}`} />
                       {q.options.length > 2 && (
                         <button onClick={() => removeOption(q.id, optIdx)} className="text-outline hover:text-on-surface p-1 rounded-full opacity-60 hover:opacity-100 cursor-pointer">
                           <span className="material-symbols-outlined text-[18px]">close</span>
@@ -163,6 +312,100 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
           <span>Add Question</span>
         </button>
       </main>
+
+      {/* ── Bulk Import Modal ── */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center pb-3 border-b border-outline-variant">
+              <div>
+                <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">playlist_add</span>
+                  Bulk Import Questions
+                </h2>
+                <p className="text-xs text-on-surface-variant">
+                  Paste multiple-choice questions from past papers or notes. Questions and options are auto-detected.
+                </p>
+              </div>
+              <button onClick={() => setShowBulkModal(false)} className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container-low">
+                <span className="material-symbols-outlined text-[22px]">close</span>
+              </button>
+            </div>
+
+            {/* Quick 1-click preset */}
+            <div className="my-3 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-primary">⚡ Ready-made High-Yield Exam:</p>
+                <p className="text-[11px] text-on-surface-variant">Load all 44 Obstetrics & Gynaecology MCQs with verified correct answers.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadObgynExam}
+                className="px-3 py-1.5 bg-primary text-on-primary hover:bg-primary-container text-xs font-bold rounded-lg transition-transform active:scale-95 shadow-sm cursor-pointer"
+              >
+                Load All 44 Questions
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-hidden flex flex-col py-2">
+              <label className="text-xs font-semibold text-secondary mb-1 flex justify-between">
+                <span>Or Paste Raw Question Text:</span>
+                {previewCount > 0 && (
+                  <span className="text-primary font-bold">{previewCount} questions recognized</span>
+                )}
+              </label>
+              <textarea
+                value={bulkText}
+                onChange={e => setBulkText(e.target.value)}
+                placeholder={`Example Format:
+
+1. Triad of watery, blood stained vaginal discharge, abdominal pain and pelvic mass is?
+A. Latzko triad *
+B. Meigg triad
+C. Fitz-Hugh-Curtis syndrome
+D. Saint's triad
+
+2. Which is not an emergency contraception?
+A. Ella One
+B. Levonorgestrel only
+C. Nonoxynol-9 *`}
+                className="w-full flex-1 min-h-[220px] bg-surface-bright border border-outline-variant rounded-xl p-3 text-xs md:text-sm font-mono text-on-surface placeholder:text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-outline-variant flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] text-on-surface-variant">
+                Tip: Mark the correct answer with an asterisk (e.g. <code className="bg-surface-container px-1 py-0.5 rounded">*</code>) or write <code className="bg-surface-container px-1 py-0.5 rounded">Answer: B</code>.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-secondary hover:text-on-surface rounded-xl hover:bg-surface-container-low transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyBulk(false)}
+                  disabled={previewCount === 0}
+                  className="px-4 py-2 text-xs font-bold bg-surface-container-high hover:bg-surface-container text-on-surface border border-outline-variant rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Append ({previewCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyBulk(true)}
+                  disabled={previewCount === 0}
+                  className="px-4 py-2 text-xs font-bold bg-primary text-on-primary hover:bg-primary-container rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Replace All ({previewCount})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

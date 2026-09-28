@@ -11,10 +11,18 @@ export default function PlayQuizPage({ params }: { params: Promise<{ quizId: str
   const { quizzes, handleCompleteQuizPlay } = useNankiStore();
   const quiz = quizzes.find(q => q.id === quizId) || quizzes[0];
 
-  const handleComplete = (correct: number, wrong: number, incorrectIds: string[]) => {
+  const handleComplete = (
+    correct: number,
+    wrong: number,
+    incorrectIds: string[],
+    userAnswers: Record<string, number | null>
+  ) => {
     handleCompleteQuizPlay(quizId, correct, wrong);
     try {
-      sessionStorage.setItem(`nanki_results_${quizId}`, JSON.stringify({ correct, wrong, incorrectIds }));
+      sessionStorage.setItem(
+        `nanki_results_${quizId}`,
+        JSON.stringify({ correct, wrong, incorrectIds, userAnswers })
+      );
     } catch {}
     router.push(`/quiz/${quizId}/results`);
   };

@@ -1,6 +1,8 @@
 import type { Quiz, Deck, UserProfile } from '@/types/nanki';
+import { OBGYN_QUIZ } from './obgyn-quiz';
 
 export const INITIAL_QUIZZES: Quiz[] = [
+  OBGYN_QUIZ,
   {
     id: 'bio-respiration',
     title: 'Cellular Respiration',

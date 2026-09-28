@@ -8,12 +8,23 @@ interface QuizResultsProps {
   correctCount: number;
   wrongCount: number;
   incorrectQuestionIds: string[];
+  userAnswers?: Record<string, number | null>;
   onClose: () => void;
   onRetake: () => void;
 }
 
-export default function QuizResults({ quiz, correctCount, wrongCount, incorrectQuestionIds, onClose, onRetake }: QuizResultsProps) {
-  const [showErrorReview, setShowErrorReview] = useState(false);
+export default function QuizResults({
+  quiz,
+  correctCount,
+  wrongCount,
+  incorrectQuestionIds,
+  userAnswers = {},
+  onClose,
+  onRetake,
+}: QuizResultsProps) {
+  const [showReview, setShowReview] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'mistakes' | 'all'>('mistakes');
+
   const totalQuestions = quiz.questions.length;
   const scorePercent = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
@@ -25,13 +36,19 @@ export default function QuizResults({ quiz, correctCount, wrongCount, incorrectQ
   };
   const feedback = getFeedback();
 
+  const questionsToReview = reviewFilter === 'mistakes'
+    ? quiz.questions.filter(q => incorrectQuestionIds.includes(q.id))
+    : quiz.questions;
+
   return (
     <div className="min-h-screen bg-background text-on-background font-sans flex flex-col antialiased">
       <header className="bg-surface-container-lowest border-b border-outline-variant fixed top-0 w-full z-40">
         <div className="flex justify-between items-center px-4 py-3 max-w-[800px] mx-auto">
           <div className="flex items-center gap-2">
             <span className="font-headline-lg-mobile font-bold text-primary">Nanki</span>
-            <span className="text-secondary text-sm border-l border-outline-variant pl-2 truncate max-w-[150px] md:max-w-[400px]">{quiz.title} Results</span>
+            <span className="text-secondary text-sm border-l border-outline-variant pl-2 truncate max-w-[150px] md:max-w-[400px]">
+              {quiz.title} Results
+            </span>
           </div>
           <button onClick={onClose} className="text-secondary hover:text-on-surface p-1 rounded-full hover:bg-surface-container-low transition-colors cursor-pointer">
             <span className="material-symbols-outlined">close</span>
@@ -40,7 +57,7 @@ export default function QuizResults({ quiz, correctCount, wrongCount, incorrectQ
       </header>
 
       <main className="flex-grow pt-20 pb-24 px-4 max-w-[800px] w-full mx-auto flex flex-col justify-center">
-        {!showErrorReview ? (
+        {!showReview ? (
           <div className="w-full flex flex-col items-center animate-fadeIn">
             <div className="relative w-full flex justify-center mb-8 py-4">
               <div className="absolute inset-0 pointer-events-none blur-2xl"></div>
@@ -84,43 +101,184 @@ export default function QuizResults({ quiz, correctCount, wrongCount, incorrectQ
                 <span className="material-symbols-outlined text-[18px]">refresh</span>
                 <span>Retake Quiz</span>
               </button>
-              {wrongCount > 0 && (
-                <button onClick={() => setShowErrorReview(true)} className="flex-1 bg-surface-container-lowest text-tertiary border border-tertiary-container font-bold px-6 py-3 rounded-full flex items-center justify-center gap-1 hover:bg-surface-container-low transition-all cursor-pointer active:scale-95">
+              {wrongCount > 0 ? (
+                <button
+                  onClick={() => {
+                    setReviewFilter('mistakes');
+                    setShowReview(true);
+                  }}
+                  className="flex-1 bg-surface-container-lowest text-error border border-error/40 hover:border-error font-bold px-6 py-3 rounded-full flex items-center justify-center gap-1 hover:bg-error-container/20 transition-all cursor-pointer active:scale-95"
+                >
                   <span className="material-symbols-outlined text-[18px]">visibility</span>
                   <span>Review {wrongCount} Error{wrongCount > 1 ? 's' : ''}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setReviewFilter('all');
+                    setShowReview(true);
+                  }}
+                  className="flex-1 bg-surface-container-lowest text-tertiary border border-tertiary font-bold px-6 py-3 rounded-full flex items-center justify-center gap-1 hover:bg-surface-container-low transition-all cursor-pointer active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[18px]">visibility</span>
+                  <span>Review Questions</span>
                 </button>
               )}
             </div>
           </div>
         ) : (
           <div className="w-full animate-fadeIn">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-title-md text-lg font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined text-error">warning</span>
-                Reviewing Mistakes
-              </h2>
-              <button onClick={() => setShowErrorReview(false)} className="text-primary text-xs font-bold hover:underline cursor-pointer">Back to Scores</button>
-            </div>
-            <div className="flex flex-col gap-4 mb-8 max-h-[480px] overflow-y-auto pr-1">
-              {quiz.questions.filter(q => incorrectQuestionIds.includes(q.id)).map((q, i) => (
-                <div key={q.id} className="bg-surface-container-lowest border border-outline-variant p-5 rounded-2xl shadow-sm">
-                  <p className="font-label-md text-xs text-secondary uppercase mb-2">Mistake {i + 1}</p>
-                  <h3 className="font-body-lg text-base font-semibold text-on-surface mb-4">{q.text}</h3>
-                  <div className="flex flex-col gap-2">
-                    {q.options.map((opt, oIdx) => {
-                      const isCorrect = oIdx === q.correctOptionIndex;
-                      return (
-                        <div key={oIdx} className={`p-3 rounded-xl border text-sm flex items-center justify-between ${isCorrect ? 'bg-tertiary/10 border-tertiary text-tertiary font-medium' : 'border-outline-variant text-on-surface-variant'}`}>
-                          <span>{opt}</span>
-                          {isCorrect && <span className="material-symbols-outlined text-tertiary font-bold text-sm">check</span>}
-                        </div>
-                      );
-                    })}
+            {/* Header & Filter tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-2">
+                <h2 className="font-title-md text-lg font-bold flex items-center gap-2 text-on-surface">
+                  <span className="material-symbols-outlined text-error">fact_check</span>
+                  {reviewFilter === 'mistakes' ? 'Reviewing Mistakes' : 'Reviewing All Questions'}
+                </h2>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-bold">
+                  {questionsToReview.length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {wrongCount > 0 && (
+                  <div className="inline-flex p-1 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setReviewFilter('mistakes')}
+                      className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                        reviewFilter === 'mistakes'
+                          ? 'bg-surface-container-lowest text-error font-bold shadow-sm'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      Mistakes ({wrongCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewFilter('all')}
+                      className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                        reviewFilter === 'all'
+                          ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      All ({totalQuestions})
+                    </button>
                   </div>
-                </div>
-              ))}
+                )}
+                <button
+                  onClick={() => setShowReview(false)}
+                  className="text-primary text-xs font-bold hover:underline cursor-pointer px-2 py-1"
+                >
+                  Back to Scores
+                </button>
+              </div>
             </div>
-            <button onClick={() => setShowErrorReview(false)} className="w-full bg-primary text-on-primary py-3 rounded-full hover:bg-primary-container transition-all cursor-pointer text-center font-bold">
+
+            {/* Questions list */}
+            <div className="flex flex-col gap-5 mb-8 max-h-[600px] overflow-y-auto pr-1">
+              {questionsToReview.map((q, i) => {
+                const userChoiceIdx = userAnswers?.[q.id];
+                const wasAnswered = userChoiceIdx !== undefined && userChoiceIdx !== null;
+                const isMistake = incorrectQuestionIds.includes(q.id);
+
+                return (
+                  <div
+                    key={q.id}
+                    className="bg-surface-container-lowest border border-outline-variant p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-label-md text-xs text-secondary uppercase font-bold tracking-wider">
+                          Question {quiz.questions.findIndex(item => item.id === q.id) + 1}
+                        </span>
+                        {isMistake ? (
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">close</span>
+                            Mistake
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">check</span>
+                            Correct
+                          </span>
+                        )}
+                      </div>
+
+                      {!wasAnswered && (
+                        <span className="text-[11px] font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">timer_off</span>
+                          Time ran out
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="font-body-lg text-sm md:text-base font-semibold text-on-surface mb-4 leading-relaxed">
+                      {q.text}
+                    </h3>
+
+                    <div className="flex flex-col gap-2.5">
+                      {q.options.map((opt, oIdx) => {
+                        const isCorrect = oIdx === q.correctOptionIndex;
+                        const isUserChoice = wasAnswered && userChoiceIdx === oIdx;
+                        const isWrongUserChoice = isUserChoice && !isCorrect;
+
+                        let cardStyle = 'border-outline-variant/60 bg-surface-container-lowest text-on-surface-variant opacity-75';
+                        let badgeCircleStyle = 'border-outline-variant bg-surface-container-low text-secondary';
+
+                        if (isCorrect) {
+                          cardStyle = 'bg-emerald-500/10 border-emerald-500 text-emerald-950 dark:text-emerald-100 font-semibold ring-1 ring-emerald-500/30 opacity-100 shadow-sm';
+                          badgeCircleStyle = 'border-emerald-500 bg-emerald-500 text-white';
+                        } else if (isWrongUserChoice) {
+                          cardStyle = 'bg-rose-500/10 border-rose-500 text-rose-950 dark:text-rose-100 font-semibold ring-1 ring-rose-500/30 opacity-100 shadow-sm';
+                          badgeCircleStyle = 'border-rose-500 bg-rose-500 text-white';
+                        }
+
+                        return (
+                          <div
+                            key={oIdx}
+                            className={`p-3.5 rounded-xl border text-xs md:text-sm flex items-center justify-between gap-3 transition-all ${cardStyle}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span
+                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border flex-shrink-0 ${badgeCircleStyle}`}
+                              >
+                                {String.fromCharCode(65 + oIdx)}
+                              </span>
+                              <span className="leading-normal">{opt}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {/* Wrong answer badge */}
+                              {isWrongUserChoice && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60 px-2.5 py-1 rounded-full border border-rose-300 dark:border-rose-800">
+                                  <span className="material-symbols-outlined text-[15px] font-bold">close</span>
+                                  Your Pick
+                                </span>
+                              )}
+
+                              {/* Correct answer badge */}
+                              {isCorrect && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
+                                  <span className="material-symbols-outlined text-[15px] font-bold">check</span>
+                                  {isUserChoice ? 'Your Pick (Correct)' : 'Correct Answer'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setShowReview(false)}
+              className="w-full bg-primary text-on-primary py-3 rounded-full hover:bg-primary-container transition-all cursor-pointer text-center font-bold shadow-sm active:scale-98"
+            >
               Finish Review
             </button>
           </div>

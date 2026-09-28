@@ -9,6 +9,7 @@ interface ResultsData {
   correct: number;
   wrong: number;
   incorrectIds: string[];
+  userAnswers?: Record<string, number | null>;
 }
 
 export default function QuizResultsPage({ params }: { params: Promise<{ quizId: string }> }) {
@@ -44,6 +45,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ quizId: 
       correctCount={results.correct}
       wrongCount={results.wrong}
       incorrectQuestionIds={results.incorrectIds}
+      userAnswers={results.userAnswers || {}}
       onClose={() => router.push('/dashboard')}
       onRetake={() => router.push(`/quiz/${quizId}/play`)}
     />

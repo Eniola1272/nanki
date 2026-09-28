@@ -6,12 +6,13 @@ import type { Quiz, Question } from '@/types/nanki';
 interface QuizPlayProps {
   quiz: Quiz;
   onClose: () => void;
-  onComplete: (correct: number, wrong: number, incorrectIds: string[]) => void;
+  onComplete: (correct: number, wrong: number, incorrectIds: string[], userAnswers: Record<string, number | null>) => void;
 }
 
 export default function QuizPlay({ quiz, onClose, onComplete }: QuizPlayProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<string, number | null>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [timeLeft, setTimeLeft] = useState(45);
   const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
@@ -37,13 +38,15 @@ export default function QuizPlay({ quiz, onClose, onComplete }: QuizPlayProps) {
     const isCorrect = selectedIdx === currentQuestion.correctOptionIndex;
     const newCorrect = isCorrect ? correctAnswersCount + 1 : correctAnswersCount;
     const newIncorrect = isCorrect ? incorrectQuestionIds : [...incorrectQuestionIds, currentQuestion.id];
+    const newUserAnswers = { ...userAnswers, [currentQuestion.id]: selectedIdx };
+    setUserAnswers(newUserAnswers);
 
     if (currentIdx + 1 < questions.length) {
       if (isCorrect) setCorrectAnswersCount(p => p + 1);
       else setIncorrectQuestionIds(p => [...p, currentQuestion.id]);
       setCurrentIdx(p => p + 1);
     } else {
-      onComplete(newCorrect, questions.length - newCorrect, newIncorrect);
+      onComplete(newCorrect, questions.length - newCorrect, newIncorrect, newUserAnswers);
     }
   };
 

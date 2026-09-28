@@ -5,7 +5,7 @@ import {
   useCallback, useRef, ReactNode,
 } from 'react';
 import type { Quiz, Deck, UserProfile, Card, Question } from '@/types/nanki';
-import { INITIAL_PROFILE } from '@/lib/data/initial-data';
+import { INITIAL_PROFILE, INITIAL_QUIZZES, INITIAL_DECKS } from '@/lib/data/initial-data';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/db/supabase-browser';
 import { showToast } from '@/lib/utils/toast';
@@ -74,8 +74,8 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   const userIdRef = useRef<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [decks, setDecks] = useState<Deck[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>(INITIAL_QUIZZES);
+  const [decks, setDecks] = useState<Deck[]>(INITIAL_DECKS);
   const [loading, setLoading] = useState(true);
   const [showCreatorSelector, setShowCreatorSelector] = useState(false);
 
@@ -115,8 +115,8 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
       if (qErr) {
         showToast.error('Failed to load quizzes', { description: qErr.message });
-      } else {
-        setQuizzes((quizRows ?? []).map(dbQuizToLocal));
+      } else if (quizRows && quizRows.length > 0) {
+        setQuizzes(quizRows.map(dbQuizToLocal));
       }
 
       // Fetch decks
@@ -129,8 +129,8 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
       if (dErr) {
         showToast.error('Failed to load flashcard decks', { description: dErr.message });
-      } else {
-        setDecks((deckRows ?? []).map(dbDeckToLocal));
+      } else if (deckRows && deckRows.length > 0) {
+        setDecks(deckRows.map(dbDeckToLocal));
       }
 
       setLoading(false);
@@ -146,25 +146,39 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
   // ── Save quiz ──────────────────────────────────────────────────────────────
   const handleSaveQuiz = useCallback((savedQuiz: Quiz) => {
-    const isNew = !quizzes.some(q => q.id === savedQuiz.id);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(savedQuiz.id);
+    const normalizedQuiz = isUuid ? savedQuiz : {
+      ...savedQuiz,
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : savedQuiz.id,
+    };
+
+    const isNew = !quizzes.some(q => q.id === normalizedQuiz.id);
 
     // Optimistic local update
     setQuizzes(prev =>
       isNew
-        ? [savedQuiz, ...prev]
-        : prev.map(q => q.id === savedQuiz.id ? savedQuiz : q)
+        ? [normalizedQuiz, ...prev]
+        : prev.map(q => q.id === normalizedQuiz.id ? normalizedQuiz : q)
     );
+
+    // If guest/local mode without auth, keep local and notify
+    if (!userIdRef.current) {
+      showToast.success(
+        isNew ? `Quiz "${normalizedQuiz.title}" created!` : `Quiz "${normalizedQuiz.title}" updated!`
+      );
+      return;
+    }
 
     // Persist to Supabase
     ;(async () => {
       const supabase = createClient();
       const payload = {
-        id: savedQuiz.id,
-        title: savedQuiz.title,
-        description: savedQuiz.description,
-        content: savedQuiz.questions as unknown as Json,
-        category: savedQuiz.category,
-        mastered_percentage: savedQuiz.masteredPercentage ?? 0,
+        id: normalizedQuiz.id,
+        title: normalizedQuiz.title,
+        description: normalizedQuiz.description,
+        content: normalizedQuiz.questions as unknown as Json,
+        category: normalizedQuiz.category,
+        mastered_percentage: normalizedQuiz.masteredPercentage ?? 0,
         user_id: userIdRef.current,
         published: false,
       };
@@ -179,12 +193,12 @@ export function NankiProvider({ children }: { children: ReactNode }) {
         // Rollback optimistic update on error
         setQuizzes(prev =>
           isNew
-            ? prev.filter(q => q.id !== savedQuiz.id)
-            : prev.map(q => q.id === savedQuiz.id ? savedQuiz : q)
+            ? prev.filter(q => q.id !== normalizedQuiz.id)
+            : prev.map(q => q.id === normalizedQuiz.id ? normalizedQuiz : q)
         );
       } else {
         showToast.success(
-          isNew ? `Quiz "${savedQuiz.title}" created!` : `Quiz "${savedQuiz.title}" updated!`
+          isNew ? `Quiz "${normalizedQuiz.title}" created!` : `Quiz "${normalizedQuiz.title}" updated!`
         );
       }
     })();
@@ -192,22 +206,36 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
   // ── Save deck ──────────────────────────────────────────────────────────────
   const handleSaveDeck = useCallback((savedDeck: Deck) => {
-    const isNew = !decks.some(d => d.id === savedDeck.id);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(savedDeck.id);
+    const normalizedDeck = isUuid ? savedDeck : {
+      ...savedDeck,
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : savedDeck.id,
+    };
+
+    const isNew = !decks.some(d => d.id === normalizedDeck.id);
 
     // Optimistic local update
     setDecks(prev =>
       isNew
-        ? [savedDeck, ...prev]
-        : prev.map(d => d.id === savedDeck.id ? savedDeck : d)
+        ? [normalizedDeck, ...prev]
+        : prev.map(d => d.id === normalizedDeck.id ? normalizedDeck : d)
     );
+
+    // If guest/local mode without auth, keep local and notify
+    if (!userIdRef.current) {
+      showToast.success(
+        isNew ? `Deck "${normalizedDeck.title}" created!` : `Deck "${normalizedDeck.title}" updated!`
+      );
+      return;
+    }
 
     // Persist to Supabase
     ;(async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = createClient() as any;
       const payload = {
-        id: savedDeck.id,
-        title: savedDeck.title,
+        id: normalizedDeck.id,
+        title: normalizedDeck.title,
         description: savedDeck.description,
         content: savedDeck.cards,
         category: savedDeck.category,
