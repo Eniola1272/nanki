@@ -4,6 +4,8 @@ import { useState, useRef } from 'react';
 import { useNankiStore } from '@/lib/nanki-store';
 import { editorDraftKey } from '@/lib/editor/drafts';
 import { useEditorDraft } from '@/lib/editor/use-editor-draft';
+import { parseQuestionsFromText } from '@/lib/quiz/bulk-import';
+import BulkImportPrompt from './BulkImportPrompt';
 import VisibilityField from './VisibilityField';
 import type { Quiz, Question } from '@/types/nanki';
 import { OBGYN_QUIZ } from '@/lib/data/obgyn-quiz';
@@ -12,108 +14,6 @@ interface QuizEditorProps {
   quiz: Quiz | null;
   onSave: (quiz: Quiz) => Promise<boolean>;
   onClose: () => void;
-}
-
-function parseQuestionsFromText(text: string): Question[] {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const parsedQuestions: Question[] = [];
-
-  let currentStem = '';
-  let currentOptions: string[] = [];
-  let currentCorrectIdx = 0;
-  let hasSetCorrect = false;
-
-  const flushQuestion = () => {
-    if (currentStem && currentOptions.length >= 2) {
-      const qId = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `q-${Date.now()}-${parsedQuestions.length}`;
-
-      parsedQuestions.push({
-        id: qId,
-        text: currentStem,
-        timer: '30s',
-        options: currentOptions.slice(0, 6),
-        correctOptionIndex: currentCorrectIdx < currentOptions.length ? currentCorrectIdx : 0,
-      });
-    }
-    currentStem = '';
-    currentOptions = [];
-    currentCorrectIdx = 0;
-    hasSetCorrect = false;
-  };
-
-  const optionRegex = /^([A-Fa-f1-6][\.\)\:\-]\s*|\-\s+)(.+)$/;
-  const answerLineRegex = /^(?:Ans(?:wer)?|Correct(?:\s+Option)?)\s*[:\-]?\s*([A-Fa-f1-6])/i;
-  const questionNumberRegex = /^(?:(?:Q|Question)\s*\d+[\.\:\-]?|\d+[\.\)\:\-])\s*(.+)$/i;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Check for "Answer: X" line
-    const ansMatch = line.match(answerLineRegex);
-    if (ansMatch) {
-      const char = ansMatch[1].toUpperCase();
-      let idx = 0;
-      if (/[A-F]/.test(char)) idx = char.charCodeAt(0) - 65;
-      else if (/[1-6]/.test(char)) idx = parseInt(char, 10) - 1;
-      if (idx >= 0 && idx < currentOptions.length) {
-        currentCorrectIdx = idx;
-        hasSetCorrect = true;
-      }
-      continue;
-    }
-
-    // Determine if line looks like an option
-    const isLetterOption = /^[A-Fa-f][\.\)\:\-]\s*/.test(line);
-    const isBulletOption = /^\-\s+/.test(line);
-    const isNumberOption = /^[1-6][\.\)\:\-]\s*/.test(line);
-    const isOptionCandidate = isLetterOption || isBulletOption || (isNumberOption && currentOptions.length > 0 && currentStem.length > 0);
-
-    if (currentStem && isOptionCandidate) {
-      const optMatch = line.match(optionRegex);
-      let optText = optMatch ? optMatch[2].trim() : line.replace(/^[A-Fa-f1-6][\.\)\:\-]\s*/, '').trim();
-      const isMarked = /\*|\(correct\)|\(ans\)|\[x\]/i.test(optText);
-      optText = optText.replace(/\*|\(correct\)|\(ans\)|\[x\]/gi, '').trim();
-
-      if (isMarked && !hasSetCorrect) {
-        currentCorrectIdx = currentOptions.length;
-        hasSetCorrect = true;
-      }
-      if (currentOptions.length < 6) {
-        currentOptions.push(optText);
-      }
-      continue;
-    }
-
-    // Check for explicit Question Numbering (e.g. 1. Question stem...)
-    const qNumMatch = line.match(questionNumberRegex);
-    if (qNumMatch && !isLetterOption) {
-      flushQuestion();
-      currentStem = qNumMatch[1].trim();
-      continue;
-    }
-
-    // If options are already collected and this line looks like a new question stem
-    const isLikelyQuestionStem = /\?$|^(?:The following|Which|Regarding|Features|Concerning|Contraindications|Indications|What|About|There was)/i.test(line);
-    if (currentOptions.length >= 2 && isLikelyQuestionStem) {
-      flushQuestion();
-      currentStem = line;
-      continue;
-    }
-
-    // Stems & option continuation
-    if (!currentStem) {
-      currentStem = line;
-    } else if (currentOptions.length === 0) {
-      currentStem += ' ' + line;
-    } else {
-      currentOptions[currentOptions.length - 1] += ' ' + line;
-    }
-  }
-
-  flushQuestion();
-  return parsedQuestions;
 }
 
 export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
@@ -341,7 +241,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
       {/* ── Bulk Import Modal ── */}
       {showBulkModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center pb-3 border-b border-outline-variant">
               <div>
                 <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
@@ -356,6 +256,8 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
                 <span className="material-symbols-outlined text-[22px]">close</span>
               </button>
             </div>
+
+            <BulkImportPrompt />
 
             {/* Quick 1-click preset */}
             <div className="my-3 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between">
@@ -372,14 +274,15 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col py-2">
-              <label className="text-xs font-semibold text-secondary mb-1 flex justify-between">
-                <span>Or Paste Raw Question Text:</span>
+            <div className="flex-1 shrink-0 flex flex-col py-2">
+              <label htmlFor="bulk-questions" className="text-xs font-semibold text-secondary mb-1 flex justify-between">
+                <span>Paste formatted questions or question-bank text:</span>
                 {previewCount > 0 && (
                   <span className="text-primary font-bold">{previewCount} questions recognized</span>
                 )}
               </label>
               <textarea
+                id="bulk-questions"
                 value={bulkText}
                 onChange={e => setBulkText(e.target.value)}
                 placeholder={`Example Format:
