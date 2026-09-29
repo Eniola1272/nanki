@@ -9,9 +9,8 @@ export default function NewQuizPage() {
   const router = useRouter();
   const { handleSaveQuiz } = useNankiStore();
 
-  const handleSave = (quiz: Quiz) => {
-    handleSaveQuiz(quiz);
-    router.push('/dashboard');
+  const handleSave = async (quiz: Quiz) => {
+    if (await handleSaveQuiz(quiz)) router.push('/dashboard');
   };
 
   return <QuizEditor quiz={null} onSave={handleSave} onClose={() => router.back()} />;

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import VisibilityField from './VisibilityField';
 import type { Quiz, Question } from '@/types/nanki';
 import { OBGYN_QUIZ } from '@/lib/data/obgyn-quiz';
 
 interface QuizEditorProps {
   quiz: Quiz | null;
-  onSave: (quiz: Quiz) => void;
+  onSave: (quiz: Quiz) => Promise<void>;
   onClose: () => void;
 }
 
@@ -113,6 +114,9 @@ function parseQuestionsFromText(text: string): Question[] {
 }
 
 export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
+  const [published, setPublished] = useState(quiz?.published ?? false);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [title, setTitle] = useState(quiz?.title || '');
   const [description, setDescription] = useState(quiz?.description || '');
   const [category, setCategory] = useState(quiz?.category || 'Medicine');
@@ -160,16 +164,22 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
       return { ...q, options: opts, correctOptionIndex: ci };
     }));
 
-  const handleSave = () => {
-    const finalId = quiz?.id || generateUuid();
-    onSave({
-      id: finalId,
-      title: title.trim() || 'Untitled Quiz',
-      description: description.trim() || 'No description provided.',
-      category,
-      masteredPercentage: quiz?.masteredPercentage || 0,
-      questions: questions.map(q => ({ ...q, text: q.text.trim() || 'Untitled Question' })),
-    });
+  const handleSave = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const finalId = quiz?.id || generateUuid();
+      await onSave({
+        published,
+        id: finalId,
+        title: title.trim() || 'Untitled Quiz',
+        description: description.trim() || 'No description provided.',
+        category,
+        masteredPercentage: quiz?.masteredPercentage || 0,
+        questions: questions.map(q => ({ ...q, text: q.text.trim() || 'Untitled Question' })),
+      });
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   const handleApplyBulk = (replace: boolean) => {
@@ -216,12 +226,13 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
               <span className="material-symbols-outlined text-[18px] text-primary">playlist_add</span>
               <span>Bulk Import</span>
             </button>
-            <button onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">Save</button>
+            <button disabled={saving} onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">{saving ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto pt-20 px-4 flex flex-col gap-6">
+        <VisibilityField published={published} onChange={setPublished} />
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Quiz Title (e.g. Obstetrics & Gynaecology MCQs)"

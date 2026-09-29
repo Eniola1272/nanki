@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import LikeButton from './LikeButton';
 import type { Deck, Card } from '@/types/nanki';
 
 interface FlashcardPlayerProps {
@@ -9,6 +10,10 @@ interface FlashcardPlayerProps {
 }
 
 export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps) {
+  const [complete, setComplete] = useState(false);
+  const advancing = useRef(false);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [slideState, setSlideState] = useState<'normal' | 'swipout' | 'slidein'>('normal');
@@ -20,14 +25,37 @@ export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps)
   const handleFlip = () => setIsFlipped(!isFlipped);
 
   const handleFeedback = () => {
+    if (advancing.current || complete || !cards.length) return;
+    advancing.current = true;
     setSlideState('swipout');
-    setTimeout(() => {
+    timers.current.push(setTimeout(() => {
       setIsFlipped(false);
-      setCurrentIndex(prev => (prev + 1 < cards.length ? prev + 1 : 0));
+      if (currentIndex + 1 === cards.length) {
+        setComplete(true);
+        setSlideState('normal');
+        advancing.current = false;
+        return;
+      }
+      setCurrentIndex(prev => prev + 1);
       setSlideState('slidein');
-      setTimeout(() => setSlideState('normal'), 300);
-    }, 300);
+      timers.current.push(setTimeout(() => { setSlideState('normal'); advancing.current = false; }, 300));
+    }, 300));
   };
+
+  if (complete || !cards.length) return (
+    <div className="fixed inset-0 bg-primary text-on-primary z-50 flex items-center justify-center p-6">
+      <main className="max-w-lg text-center space-y-6">
+        <span className="material-symbols-outlined text-[72px]" aria-hidden="true">{complete ? 'celebration' : 'style'}</span>
+        <h1 className="text-3xl font-extrabold">{complete ? 'Congratulations, you are all done!' : 'No flashcards yet'}</h1>
+        <p>{complete ? `You reviewed all ${cards.length} cards in ${deck.title}.` : 'Add some cards to this deck to start studying.'}</p>
+        {complete && <LikeButton kind="deck" id={deck.id} />}
+        <div className="flex flex-wrap justify-center gap-3">
+          <button onClick={onClose} className="rounded-full bg-white text-primary px-6 py-3 font-bold">Done</button>
+          {complete && <button onClick={() => { setCurrentIndex(0); setIsFlipped(false); setComplete(false); }} className="rounded-full border border-white/40 px-6 py-3 font-bold">Study again</button>}
+        </div>
+      </main>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-primary text-on-primary z-50 flex flex-col font-sans">
@@ -100,21 +128,9 @@ export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps)
             </div>
           ) : (
             <div className="flex w-full max-w-[550px] gap-2 md:gap-3 justify-between px-2 animate-fadeIn">
-              {[
-                { label: 'Again', time: '< 1m', cls: 'border-error-container/30 text-error-container' },
-                { label: 'Hard', time: '6m', cls: 'border-primary-fixed-dim/30 text-primary-fixed-dim' },
-                { label: 'Good', time: '10m', cls: 'bg-tertiary-container/30 hover:bg-tertiary-container/50 border-tertiary-fixed-dim/50 text-tertiary-fixed-dim' },
-                { label: 'Easy', time: '4d', cls: 'border-primary-fixed-dim/30 text-primary-fixed-dim' },
-              ].map(btn => (
-                <button
-                  key={btn.label}
-                  onClick={handleFeedback}
-                  className={`flex-1 py-2.5 px-2 rounded-xl bg-white/10 hover:bg-white/20 border font-medium transition-all active:scale-[0.95] flex flex-col items-center justify-center cursor-pointer ${btn.cls}`}
-                >
-                  <span className="text-[10px] opacity-70 mb-0.5">{btn.time}</span>
-                  <span className="text-sm font-semibold">{btn.label}</span>
-                </button>
-              ))}
+              <button onClick={handleFeedback} disabled={slideState !== 'normal'} className="w-full rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 px-6 py-3 font-semibold disabled:opacity-50">
+                {currentIndex + 1 === cards.length ? 'Finish flashcards' : 'Next card'}
+              </button>
             </div>
           )}
         </div>

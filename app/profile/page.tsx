@@ -1,12 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import ProgressHistory from '@/components/nanki/ProgressHistory';
 import NankiShell from '@/components/nanki/NankiShell';
 import { useNankiStore } from '@/lib/nanki-store';
 
 export default function ProfilePage() {
-  const { profile, quizzes, decks, handleDeleteQuiz, handleDeleteDeck } = useNankiStore();
+  const { profile, quizzes: allQuizzes, decks: allDecks, userId, resetAllState, signingOut, handleDeleteQuiz, handleDeleteDeck } = useNankiStore();
+  const quizzes = allQuizzes.filter(q => q.ownerId === userId);
+  const decks = allDecks.filter(d => d.ownerId === userId);
   const [profileTab, setProfileTab] = useState<'quizzes' | 'decks'>('quizzes');
 
   return (
@@ -28,6 +31,8 @@ export default function ProfilePage() {
             <span className="bg-tertiary/10 text-tertiary font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">{profile.totalQuizzesTaken === 0 ? 'New learner' : 'Active learner'}</span>
           </div>
         </section>
+
+        <button onClick={() => void resetAllState()} disabled={signingOut} className="rounded-full border border-outline-variant px-5 py-2 text-sm font-bold disabled:opacity-50">{signingOut ? 'Logging out…' : 'Log out'}</button>
 
         {/* Stats bento */}
         <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -98,6 +103,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex flex-col gap-3">
+            {(profileTab === 'quizzes' ? quizzes.length : decks.length) === 0 && <p className="text-sm text-secondary">You haven’t created any {profileTab} yet.</p>}
             {profileTab === 'quizzes' ? quizzes.map(item => (
               <div key={item.id} className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex items-center justify-between hover:shadow-sm">
                 <div className="flex items-center gap-3">
@@ -106,7 +112,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-on-surface">{item.title}</h4>
-                    <p className="text-xs text-secondary">Category: {item.category}</p>
+                    <p className="text-xs text-secondary">{item.category} · {item.published ? 'Public' : 'Private'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -114,6 +120,7 @@ export default function ProfilePage() {
                     <span className="block text-sm font-bold text-tertiary">{item.masteredPercentage || 0}% best</span>
                     <span className="text-[10px] text-outline">{item.questions.length} Questions</span>
                   </div>
+                  <Link href={`/quiz/${item.id}/edit`} className="text-xs font-bold text-primary">Edit</Link>
                   <button
                     onClick={() => { if (confirm(`Delete quiz "${item.title}"?`)) handleDeleteQuiz(item.id); }}
                     className="text-outline hover:text-error p-1 hover:bg-surface-container rounded-full"
@@ -130,7 +137,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-on-surface">{deck.title}</h4>
-                    <p className="text-xs text-secondary">Scope: {deck.cards.length} Flashcards</p>
+                    <p className="text-xs text-secondary">{deck.cards.length} Flashcards · {deck.published ? 'Public' : 'Private'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -138,6 +145,7 @@ export default function ProfilePage() {
                     <span className="block text-sm font-bold text-primary">Study mode</span>
                     <span className="text-[10px] text-outline">{deck.cards.length} cards</span>
                   </div>
+                  <Link href={`/deck/${deck.id}/edit`} className="text-xs font-bold text-primary">Edit</Link>
                   <button
                     onClick={() => { if (confirm(`Delete deck "${deck.title}"?`)) handleDeleteDeck(deck.id); }}
                     className="text-outline hover:text-error p-1 hover:bg-surface-container rounded-full"

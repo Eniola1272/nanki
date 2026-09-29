@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import VisibilityField from './VisibilityField';
 import type { Deck, Card } from '@/types/nanki';
 
 interface DeckEditorProps {
   deck: Deck | null;
-  onSave: (deck: Deck) => void;
+  onSave: (deck: Deck) => Promise<void>;
   onClose: () => void;
 }
 
 export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
+  const [published, setPublished] = useState(deck?.published ?? false);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [title, setTitle] = useState(deck?.title || '');
   const [category, setCategory] = useState(deck?.category || 'Biology');
   const [description, setDescription] = useState(deck?.description || '');
@@ -35,15 +39,21 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
     else if (syntax === 'code') setFrontInput(p => `${p}\`code\``);
   };
 
-  const handleSave = () => {
-    onSave({
-      id: deck?.id || `deck-${Date.now()}`,
-      title: title.trim() || 'Untitled Flashcards',
-      category,
-      description: description.trim() || `Study card deck focused on ${category}`,
-      author: deck?.author || '@you',
-      cards,
-    });
+  const handleSave = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await onSave({
+        published,
+        id: deck?.id || `deck-${Date.now()}`,
+        title: title.trim() || 'Untitled Flashcards',
+        category,
+        description: description.trim() || `Study card deck focused on ${category}`,
+        author: deck?.author || '@you',
+        cards,
+      });
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   return (
@@ -56,11 +66,12 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
             </button>
             <h1 className="font-title-md text-base md:text-lg text-on-surface font-bold">{deck ? 'Edit Flashcards' : 'New Flashcards'}</h1>
           </div>
-          <button onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">Save Deck</button>
+          <button disabled={saving} onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">{saving ? 'Saving…' : 'Save Deck'}</button>
         </div>
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto pt-20 px-4 flex flex-col gap-6">
+        <VisibilityField published={published} onChange={setPublished} />
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Flashcard Deck Title (e.g. Molecular Biology)"

@@ -231,6 +231,12 @@ export interface Database {
         }
         Relationships: []
       }
+      content_likes: {
+        Row: { id: string; user_id: string; quiz_id: string | null; deck_id: string | null; created_at: string }
+        Insert: { id?: string; user_id: string; quiz_id?: string | null; deck_id?: string | null }
+        Update: { [_ in never]: never }
+        Relationships: []
+      }
       quiz_attempts: {
         Row: {
           id: string
@@ -265,7 +271,10 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      content_like_stats: {
+        Args: Record<string, never>
+        Returns: { kind: string; content_id: string; like_count: number; liked_by_me: boolean }[]
+      }
     }
     Enums: {
       membership_role: 'ADMIN' | 'MEMBER' | 'VIEWER'

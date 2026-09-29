@@ -11,7 +11,7 @@ import { createClient } from '@/lib/db/supabase-browser';
 import { showToast } from '@/lib/utils/toast';
 import { progressStats, studyDay, percentage, type Attempt } from '@/lib/progress/stats';
 import { readAttempts, writeAttempts, mergeAttempts, syncAttempt, fromDatabase, databaseQuizId } from '@/lib/progress/storage';
-import type { Json } from '@/types/database';
+import type { Json, DbQuiz, Database } from '@/types/database';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,36 +29,39 @@ interface NankiStore {
   setShowCreatorSelector: (v: boolean) => void;
   /** Fires a Sonner info toast. Kept for backward compat with existing callers. */
   triggerToast: (msg: string) => void;
-  handleSaveQuiz: (quiz: Quiz) => void;
-  handleSaveDeck: (deck: Deck) => void;
+  handleSaveQuiz: (quiz: Quiz) => Promise<boolean>;
+  handleSaveDeck: (deck: Deck) => Promise<boolean>;
   handleDeleteQuiz: (id: string) => void;
   handleDeleteDeck: (id: string) => void;
   handleCompleteQuizPlay: (quizId: string, answers: Record<string, number | null>, attemptId: string) => string;
-  resetAllState: () => void;
+  resetAllState: () => Promise<void>;
+  signingOut: boolean;
+  likesAvailable: boolean;
+  toggleLike: (kind: 'quiz' | 'deck', id: string) => Promise<void>;
 }
 
 // ── DB ↔ Local converters ─────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function dbQuizToLocal(row: any): Quiz {
+function dbQuizToLocal(row: DbQuiz): Quiz {
   return {
     id: row.id,
+    ownerId: row.user_id, published: row.published, createdAt: row.created_at,
     title: row.title,
     description: row.description ?? '',
     category: row.category ?? '',
     masteredPercentage: row.mastered_percentage ?? 0,
-    questions: Array.isArray(row.content) ? (row.content as Question[]) : [],
+    questions: Array.isArray(row.content) ? (row.content as unknown as Question[]) : [],
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function dbDeckToLocal(row: any): Deck {
+function dbDeckToLocal(row: Database['public']['Tables']['decks']['Row']): Deck {
   return {
     id: row.id,
+    ownerId: row.user_id, published: row.published, createdAt: row.created_at,
     title: row.title,
     description: row.description ?? '',
     category: row.category ?? '',
-    cards: Array.isArray(row.content) ? (row.content as Card[]) : [],
+    cards: Array.isArray(row.content) ? (row.content as unknown as Card[]) : [],
   };
 }
 
@@ -82,6 +85,10 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   const [quizzes, setQuizzes] = useState<Quiz[]>(INITIAL_QUIZZES.map(q => ({ ...q, masteredPercentage: 0 })));
   const [decks, setDecks] = useState<Deck[]>(INITIAL_DECKS);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
+  const signingOutRef = useRef(false);
+  const [likesAvailable, setLikesAvailable] = useState(false);
+  const likeRequests = useRef(new Set<string>());
   const [showCreatorSelector, setShowCreatorSelector] = useState(false);
 
   const [userId, setUserId] = useState('guest');
@@ -124,89 +131,92 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', retry);
   }, [retrySync]);
 
-  // ── Bootstrap: load user + data from Supabase ──────────────────────────────
+  const refreshLikes = useCallback(async () => {
+    const owner = userIdRef.current;
+    const rows: Database['public']['Functions']['content_like_stats']['Returns'] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await createClient().rpc('content_like_stats').order('kind').order('content_id').range(offset, offset + 999);
+      if (owner !== userIdRef.current) return;
+      if (error) { setLikesAvailable(false); return; }
+      rows.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    const apply = <T extends Quiz | Deck>(items: T[], kind: string): T[] => items.map(item => {
+      const stats = rows.find(row => row.kind === kind && row.content_id === item.id);
+      return { ...item, likeCount: Number(stats?.like_count ?? 0), likedByMe: stats?.liked_by_me ?? false };
+    });
+    setQuizzes(items => apply(items, 'quiz'));
+    setDecks(items => apply(items, 'deck'));
+    setLikesAvailable(true);
+  }, []);
+
+  // Read owned and public content; RLS still enforces privacy at the database.
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
       const supabase = createClient();
-
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        commitAttempts(readAttempts('guest'), 'guest');
-        setLoading(false);
-        return;
+      if (cancelled) return;
+      const owner = user?.id ?? 'guest';
+      userIdRef.current = user?.id ?? null;
+      setUserId(owner);
+      commitAttempts(readAttempts(owner), owner);
+      if (user) {
+        const { data: profileRow } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single();
+        if (cancelled) return;
+        setProfile({ ...INITIAL_PROFILE, name: profileRow?.name ?? user.user_metadata?.full_name ?? 'Learner', avatar: profileRow?.avatar_url ?? user.user_metadata?.avatar_url ?? INITIAL_PROFILE.avatar });
       }
-      userIdRef.current = user.id;
-      setUserId(user.id);
-      commitAttempts(readAttempts(user.id), user.id);
-
-      // Real profile name/avatar
-      const { data: profileRow } = await supabase
-        .from('profiles')
-        .select('name, avatar_url')
-        .eq('id', user.id)
-        .single<{ name: string | null; avatar_url: string | null }>();
-
-      if (profileRow) {
-        setProfile(prev => ({
-          ...prev,
-          name: profileRow.name ?? user.user_metadata?.full_name ?? prev.name,
-          avatar: profileRow.avatar_url ?? user.user_metadata?.avatar_url ?? prev.avatar,
-        }));
-      }
-
-      // Fetch quizzes
-      const { data: quizRows, error: qErr } = await supabase
-        .from('quizzes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (qErr) {
-        showToast.error('Failed to load quizzes', { description: qErr.message });
-      }
-      const seedIds = await Promise.all(INITIAL_QUIZZES.map(q => databaseQuizId(user.id, q.id)));
-      const ownedQuizzes = (quizRows ?? []).filter(q => !seedIds.includes(q.id)).map(dbQuizToLocal);
-      const allQuizzes = [...ownedQuizzes, ...INITIAL_QUIZZES.map(q => ({ ...q, masteredPercentage: 0 }))];
-      setQuizzes(allQuizzes);
-      // Fetch every page so totals and streaks remain correct beyond 1,000 attempts.
-      const remote: Attempt[] = [];
+      const seedIds = user ? await Promise.all(INITIAL_QUIZZES.map(q => databaseQuizId(user.id, q.id))) : [];
+      const allQuizzes: Quiz[] = [];
+      const allDecks: Deck[] = [];
       for (let offset = 0; ; offset += 1000) {
-        const { data, error } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id)
-          .order('completed_at', { ascending: false }).order('id').range(offset, offset + 999);
-        if (error) { showToast.error('Could not load past results', { description: error.message }); break; }
-        for (const row of data ?? []) {
-          const attempt = fromDatabase(row, allQuizzes);
-          if (attempt) remote.push(attempt);
-        }
+        let query = supabase.from('quizzes').select('*');
+        query = user ? query.or(`user_id.eq.${user.id},published.eq.true`) : query.eq('published', true);
+        const { data, error } = await query.order('created_at', { ascending: false }).order('id').range(offset, offset + 999);
+        if (cancelled) return;
+        if (error) { showToast.error('Failed to load quizzes', { description: error.message }); break; }
+        allQuizzes.push(...(data ?? []).filter(q => !seedIds.includes(q.id)).map(dbQuizToLocal));
         if (!data || data.length < 1000) break;
       }
-      commitAttempts(mergeAttempts(attemptsRef.current, remote), user.id);
-      void retrySync();
-
-      // Fetch decks
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: deckRows, error: dErr } = await (supabase as any)
-        .from('decks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (dErr) {
-        showToast.error('Failed to load flashcard decks', { description: dErr.message });
-      } else if (deckRows && deckRows.length > 0) {
-        setDecks(deckRows.map(dbDeckToLocal));
+      allQuizzes.push(...INITIAL_QUIZZES.map(q => ({ ...q, masteredPercentage: 0 })));
+      setQuizzes(allQuizzes);
+      for (let offset = 0; ; offset += 1000) {
+        let query = supabase.from('decks').select('*');
+        query = user ? query.or(`user_id.eq.${user.id},published.eq.true`) : query.eq('published', true);
+        const { data, error } = await query.order('created_at', { ascending: false }).order('id').range(offset, offset + 999);
+        if (cancelled) return;
+        if (error) { showToast.error('Failed to load flashcards', { description: error.message }); break; }
+        allDecks.push(...(data ?? []).map(dbDeckToLocal));
+        if (!data || data.length < 1000) break;
       }
-
-      setLoading(false);
+      setDecks([...allDecks, ...INITIAL_DECKS]);
+      await refreshLikes();
+      if (cancelled) return;
+      if (user) {
+        const remote: Attempt[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const { data, error } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id)
+            .order('completed_at', { ascending: false }).order('id').range(offset, offset + 999);
+          if (cancelled) return;
+          if (error) { showToast.error('Could not load past results', { description: error.message }); break; }
+          for (const row of data ?? []) {
+            const attempt = fromDatabase(row, allQuizzes);
+            if (attempt) remote.push(attempt);
+          }
+          if (!data || data.length < 1000) break;
+        }
+        commitAttempts(mergeAttempts(attemptsRef.current, remote), user.id);
+        void retrySync();
+      }
     };
-
-    void init().catch(() => showToast.error('Could not load your account. Please reload to retry.')).finally(() => setLoading(false));
-  }, [commitAttempts, retrySync]);
+    void init().catch(() => { if (!cancelled) showToast.error('Could not load your account. Please reload to retry.'); }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [commitAttempts, retrySync, refreshLikes]);
 
   useEffect(() => {
     if (loading) return;
     const { data: { subscription } } = createClient().auth.onAuthStateChange((_event, session) => {
-      if ((session?.user.id ?? null) !== userIdRef.current) {
+      if (!signingOutRef.current && (session?.user.id ?? null) !== userIdRef.current) {
         userIdRef.current = null;
         window.location.reload();
       }
@@ -219,129 +229,74 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     showToast.info(msg);
   }, []);
 
-  // ── Save quiz ──────────────────────────────────────────────────────────────
-  const handleSaveQuiz = useCallback((savedQuiz: Quiz) => {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(savedQuiz.id);
-    const normalizedQuiz = isUuid ? savedQuiz : {
-      ...savedQuiz,
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : savedQuiz.id,
-    };
+  const handleSaveQuiz = useCallback(async (saved: Quiz) => {
+    const owner = userIdRef.current;
+    if (!owner) { showToast.error('Sign in to save a quiz.'); return false; }
+    const existing = quizzes.find(q => q.id === saved.id);
+    if (existing?.ownerId && existing.ownerId !== owner) { showToast.error('Only the author can edit this quiz.'); return false; }
+    if (saved.published && !saved.questions.length) { showToast.error('Add at least one question before publishing.'); return false; }
+    const id = existing?.ownerId === owner ? saved.id : crypto.randomUUID();
+    try {
+      const { data, error } = await createClient().from('quizzes').upsert({
+        id, user_id: owner, title: saved.title, description: saved.description,
+        content: saved.questions as unknown as Json, category: saved.category, published: saved.published ?? false,
+      }).select('*').single();
+      if (error) throw error;
+      if (userIdRef.current !== owner) return false;
+      const updated = dbQuizToLocal(data);
+      setQuizzes(prev => [updated, ...prev.filter(q => q.id !== id)]);
+      await refreshLikes();
+      showToast.success(saved.published ? 'Public quiz saved.' : 'Private quiz saved.');
+      return true;
+    } catch { showToast.error('Could not save quiz. Your changes are still in the editor.'); return false; }
+  }, [quizzes, refreshLikes]);
 
-    const isNew = !quizzes.some(q => q.id === normalizedQuiz.id);
+  const handleSaveDeck = useCallback(async (saved: Deck) => {
+    const owner = userIdRef.current;
+    if (!owner) { showToast.error('Sign in to save a deck.'); return false; }
+    const existing = decks.find(d => d.id === saved.id);
+    if (existing?.ownerId && existing.ownerId !== owner) { showToast.error('Only the author can edit this deck.'); return false; }
+    if (saved.published && !saved.cards.length) { showToast.error('Add at least one card before publishing.'); return false; }
+    const id = existing?.ownerId === owner ? saved.id : crypto.randomUUID();
+    try {
+      const { data, error } = await createClient().from('decks').upsert({
+        id, user_id: owner, title: saved.title, description: saved.description,
+        content: saved.cards as unknown as Json, category: saved.category, published: saved.published ?? false,
+      }).select('*').single();
+      if (error) throw error;
+      if (userIdRef.current !== owner) return false;
+      const updated = dbDeckToLocal(data);
+      setDecks(prev => [updated, ...prev.filter(d => d.id !== id)]);
+      await refreshLikes();
+      showToast.success(saved.published ? 'Public deck saved.' : 'Private deck saved.');
+      return true;
+    } catch { showToast.error('Could not save deck. Your changes are still in the editor.'); return false; }
+  }, [decks, refreshLikes]);
 
-    // Optimistic local update
-    setQuizzes(prev =>
-      isNew
-        ? [normalizedQuiz, ...prev]
-        : prev.map(q => q.id === normalizedQuiz.id ? normalizedQuiz : q)
-    );
-
-    // If guest/local mode without auth, keep local and notify
-    if (!userIdRef.current) {
-      showToast.success(
-        isNew ? `Quiz "${normalizedQuiz.title}" created!` : `Quiz "${normalizedQuiz.title}" updated!`
-      );
-      return;
-    }
-
-    // Persist to Supabase
-    ;(async () => {
-      const supabase = createClient();
-      const payload = {
-        id: normalizedQuiz.id,
-        title: normalizedQuiz.title,
-        description: normalizedQuiz.description,
-        content: normalizedQuiz.questions as unknown as Json,
-        category: normalizedQuiz.category,
-        mastered_percentage: normalizedQuiz.masteredPercentage ?? 0,
-        user_id: userIdRef.current,
-        published: false,
-      };
-
-      const { error } = await supabase.from('quizzes').upsert(payload);
-
-      if (error) {
-        showToast.error(
-          isNew ? 'Failed to create quiz' : 'Failed to update quiz',
-          { description: error.message }
-        );
-        // Rollback optimistic update on error
-        setQuizzes(prev =>
-          isNew
-            ? prev.filter(q => q.id !== normalizedQuiz.id)
-            : prev.map(q => q.id === normalizedQuiz.id ? normalizedQuiz : q)
-        );
-      } else {
-        showToast.success(
-          isNew ? `Quiz "${normalizedQuiz.title}" created!` : `Quiz "${normalizedQuiz.title}" updated!`
-        );
-      }
-    })();
-  }, [quizzes]);
-
-  // ── Save deck ──────────────────────────────────────────────────────────────
-  const handleSaveDeck = useCallback((savedDeck: Deck) => {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(savedDeck.id);
-    const normalizedDeck = isUuid ? savedDeck : {
-      ...savedDeck,
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : savedDeck.id,
-    };
-
-    const isNew = !decks.some(d => d.id === normalizedDeck.id);
-
-    // Optimistic local update
-    setDecks(prev =>
-      isNew
-        ? [normalizedDeck, ...prev]
-        : prev.map(d => d.id === normalizedDeck.id ? normalizedDeck : d)
-    );
-
-    // If guest/local mode without auth, keep local and notify
-    if (!userIdRef.current) {
-      showToast.success(
-        isNew ? `Deck "${normalizedDeck.title}" created!` : `Deck "${normalizedDeck.title}" updated!`
-      );
-      return;
-    }
-
-    // Persist to Supabase
-    ;(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const db = createClient() as any;
-      const payload = {
-        id: normalizedDeck.id,
-        title: normalizedDeck.title,
-        description: savedDeck.description,
-        content: savedDeck.cards,
-        category: savedDeck.category,
-        user_id: userIdRef.current,
-        published: false,
-      };
-
-      const { error } = await db.from('decks').upsert(payload);
-
-      if (error) {
-        showToast.error(
-          isNew ? 'Failed to create deck' : 'Failed to update deck',
-          { description: error.message }
-        );
-        // Rollback
-        setDecks(prev =>
-          isNew
-            ? prev.filter(d => d.id !== savedDeck.id)
-            : prev.map(d => d.id === savedDeck.id ? savedDeck : d)
-        );
-      } else {
-        showToast.success(
-          isNew ? `Deck "${savedDeck.title}" created!` : `Deck "${savedDeck.title}" updated!`
-        );
-      }
-    })();
-  }, [decks]);
+  const toggleLike = useCallback(async (kind: 'quiz' | 'deck', id: string) => {
+    const owner = userIdRef.current;
+    if (!owner) { showToast.info('Sign in to mark content helpful.'); return; }
+    const item = (kind === 'quiz' ? quizzes : decks).find(item => item.id === id);
+    if (!likesAvailable || !item?.published || item.ownerId === owner) return;
+    const key = `${kind}:${id}`;
+    if (likeRequests.current.has(key)) return;
+    likeRequests.current.add(key);
+    try {
+      const db = createClient();
+      const column = kind === 'quiz' ? 'quiz_id' : 'deck_id';
+      const { error } = item.likedByMe
+        ? await db.from('content_likes').delete().eq('user_id', owner).eq(column, id)
+        : await db.from('content_likes').insert(kind === 'quiz' ? { user_id: owner, quiz_id: id } : { user_id: owner, deck_id: id });
+      if (error && error.code !== '23505') throw error;
+      await refreshLikes();
+    } catch { showToast.error('Could not update your like. Please try again.'); }
+    finally { likeRequests.current.delete(key); }
+  }, [quizzes, decks, likesAvailable, refreshLikes]);
 
   // ── Delete quiz ────────────────────────────────────────────────────────────
   const handleDeleteQuiz = useCallback((id: string) => {
     const quiz = quizzes.find(q => q.id === id);
+    if (!quiz?.ownerId || quiz.ownerId !== userIdRef.current) return;
     setQuizzes(prev => prev.filter(q => q.id !== id));
 
     ;(async () => {
@@ -361,11 +316,11 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   // ── Delete deck ────────────────────────────────────────────────────────────
   const handleDeleteDeck = useCallback((id: string) => {
     const deck = decks.find(d => d.id === id);
+    if (!deck?.ownerId || deck.ownerId !== userIdRef.current) return;
     setDecks(prev => prev.filter(d => d.id !== id));
 
     ;(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (createClient() as any).from('decks').delete().eq('id', id);
+      const { error } = await createClient().from('decks').delete().eq('id', id);
 
       if (error) {
         showToast.error('Failed to delete deck', { description: error.message });
@@ -394,14 +349,28 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   const stats = progressStats(attempts, new Date(`${today}T12:00:00`));
   const trackedQuizzes = quizzes.map(q => ({ ...q, masteredPercentage: Math.max(0, ...attempts.filter(a => a.quizId === q.id).map(percentage)) }));
 
-  // ── Reset (sign-out + redirect home) ──────────────────────────────────────
-  const resetAllState = useCallback(() => {
-    if (!confirm('Sign out and return to the home page?')) return;
-    const supabase = createClient();
-    supabase.auth.signOut().then(() => {
-      router.push('/');
-    });
-  }, [router]);
+  const resetAllState = useCallback(async () => {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    setSigningOut(true);
+    try {
+      const { error } = await createClient().auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      userIdRef.current = null;
+      attemptsRef.current = [];
+      setAttempts([]);
+      setProfile(INITIAL_PROFILE);
+      setQuizzes([]);
+      setDecks([]);
+      // Full navigation clears every component's account state. Account-scoped
+      // drafts and pending results stay available if this learner signs back in.
+      window.location.replace('/');
+    } catch {
+      signingOutRef.current = false;
+      setSigningOut(false);
+      showToast.error('Could not log out. Please try again.');
+    }
+  }, []);
 
   return (
     <NankiContext.Provider value={{
@@ -412,7 +381,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       handleSaveQuiz, handleSaveDeck,
       handleDeleteQuiz, handleDeleteDeck,
       handleCompleteQuizPlay,
-      resetAllState,
+      resetAllState, signingOut, likesAvailable, toggleLike,
     }}>
       {children}
 

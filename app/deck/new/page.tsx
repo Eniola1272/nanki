@@ -9,9 +9,8 @@ export default function NewDeckPage() {
   const router = useRouter();
   const { handleSaveDeck } = useNankiStore();
 
-  const handleSave = (deck: Deck) => {
-    handleSaveDeck(deck);
-    router.push('/dashboard');
+  const handleSave = async (deck: Deck) => {
+    if (await handleSaveDeck(deck)) router.push('/dashboard');
   };
 
   return <DeckEditor deck={null} onSave={handleSave} onClose={() => router.back()} />;

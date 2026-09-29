@@ -64,3 +64,41 @@ build path for environments where Turbopack's worker ports are restricted.
 
 Results that failed to save in earlier versions cannot be reconstructed from
 scores that were never persisted. No historical progress is invented.
+
+## Public content and helpful votes
+
+Apply `supabase/community-migration.sql` in the Supabase SQL Editor **after**
+`setup.sql` and `decks-migration.sql`, before enabling helpful votes in a deployed
+build. The migration is repeatable; it adds `content_likes` and the
+`content_like_stats()` function. This repository change does not apply the
+migration to the hosted database automatically.
+
+New quizzes and flashcard decks default to private. Their author can choose
+Public or Private in the editor and save the change. Public content appears in
+Discover for other learners; private content is only readable by its author under
+existing row-level security. Making content private removes it from discovery
+and vote summaries but preserves completed attempts and existing votes.
+
+Each signed-in learner can mark another author's public quiz/deck helpful once,
+and remove their vote. Database constraints prevent duplicate votes; policies
+reject self-votes, votes on private content, and forged voter IDs. Discovery
+combines quiz and deck results, filters the search, then sorts by helpful votes
+(default) or newest. Vote totals never disclose other voters' identities. If the
+migration is missing or vote loading fails, the app reports votes unavailable
+and falls back to newest ordering.
+
+Flashcard sessions finish after the final card with a congratulations screen,
+Done, and Study again. The old placeholder scheduling intervals have been removed.
+Log out is available in the header and profile; it ends this browser's session,
+clears rendered account data, and preserves account-scoped pending results/drafts
+for the next sign-in.
+
+Database policy regression tests can run against an isolated PostgreSQL engine:
+
+```sh
+npm install --prefix /tmp/nanki-db-check --no-audit --no-fund --ignore-scripts @electric-sql/pglite
+NODE_PATH=/tmp/nanki-db-check/node_modules node --test tests/community-db.cjs
+```
+
+These tests load the actual setup and migration SQL and exercise anonymous,
+author, and learner roles without accessing the hosted database.

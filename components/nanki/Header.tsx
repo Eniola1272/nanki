@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export default function Header({ hideAvatar = false }: HeaderProps) {
   const router = useRouter();
-  const { profile } = useNankiStore();
+  const { profile, userId, resetAllState, signingOut } = useNankiStore();
 
   return (
     <header className="fixed top-0 w-full z-40 bg-surface-container-lowest border-b border-outline-variant shadow-sm backdrop-blur-md bg-opacity-90">
@@ -38,6 +38,7 @@ export default function Header({ hideAvatar = false }: HeaderProps) {
           <span className="font-label-md text-primary font-bold">{profile.streak}</span>
           <span className="material-symbols-outlined text-orange-500 fill text-[18px]">local_fire_department</span>
         </button>
+        {userId !== 'guest' && <button onClick={() => void resetAllState()} disabled={signingOut} className="text-xs font-bold text-secondary hover:text-primary px-2 py-2 disabled:opacity-50">{signingOut ? 'Logging out…' : 'Log out'}</button>}
       </div>
     </header>
   );

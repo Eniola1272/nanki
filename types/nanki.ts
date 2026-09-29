@@ -1,3 +1,11 @@
+export interface CommunityContent {
+  ownerId?: string | null;
+  published?: boolean;
+  likeCount?: number;
+  likedByMe?: boolean;
+  createdAt?: string;
+}
+
 export interface Question {
   id: string;
   text: string;
@@ -6,7 +14,7 @@ export interface Question {
   correctOptionIndex: number;
 }
 
-export interface Quiz {
+export interface Quiz extends CommunityContent {
   id: string;
   title: string;
   description: string;
@@ -22,7 +30,7 @@ export interface Card {
   extraNote?: string;
 }
 
-export interface Deck {
+export interface Deck extends CommunityContent {
   id: string;
   title: string;
   description: string;

@@ -85,7 +85,10 @@ function EmptyDecks({ onCreate }: { onCreate: () => void }) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { profile, quizzes, decks, loading, setShowCreatorSelector } = useNankiStore();
+  const { profile, quizzes: allQuizzes, decks: allDecks, userId, loading, setShowCreatorSelector } = useNankiStore();
+
+  const quizzes = allQuizzes.filter(q => !q.ownerId || q.ownerId === userId);
+  const decks = allDecks.filter(d => !d.ownerId || d.ownerId === userId);
 
   const openCreate = () => setShowCreatorSelector(true);
 

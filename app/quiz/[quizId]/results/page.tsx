@@ -2,6 +2,7 @@
 
 import { use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import LikeButton from '@/components/nanki/LikeButton';
 import QuizResults from '@/components/nanki/QuizResults';
 import { useNankiStore } from '@/lib/nanki-store';
 import { percentage, attemptXp } from '@/lib/progress/stats';
@@ -26,6 +27,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ quizId: 
       incorrectQuestionIds={result.quiz.questions.filter(q => result.answers[q.id] !== q.correctOptionIndex).map(q => q.id)}
       userAnswers={result.answers}
       progressSummary={<div className="w-full rounded-2xl border border-outline-variant p-4 mb-6 text-sm text-center space-y-2">
+        <LikeButton kind="quiz" id={quizId} />
         <p>{new Date(result.completedAt).toLocaleString()} · +{attemptXp(result)} XP</p>
         <p>{difference === null ? 'Your first recorded attempt on this quiz.' : `${difference > 0 ? '+' : ''}${difference} percentage points vs. your previous attempt (${percentage(previous!)}%).`}</p>
         <p>{result.synced ? 'Saved to your account' : userId === 'guest' ? 'Saved on this device only' : 'Saved on this device · waiting to sync'}</p>
