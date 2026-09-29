@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Quiz } from '@/types/nanki';
 
 interface QuizResultsProps {
   quiz: Quiz;
+  progressSummary?: ReactNode;
   correctCount: number;
   wrongCount: number;
   incorrectQuestionIds: string[];
@@ -15,6 +16,7 @@ interface QuizResultsProps {
 
 export default function QuizResults({
   quiz,
+  progressSummary,
   correctCount,
   wrongCount,
   incorrectQuestionIds,
@@ -25,7 +27,7 @@ export default function QuizResults({
   const [showReview, setShowReview] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'mistakes' | 'all'>('mistakes');
 
-  const totalQuestions = quiz.questions.length;
+  const totalQuestions = correctCount + wrongCount;
   const scorePercent = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
   const getFeedback = () => {
@@ -74,6 +76,8 @@ export default function QuizResults({
               <h2 className="text-xl md:text-2xl text-on-surface font-bold">{feedback.title}</h2>
               <p className="font-body-lg text-sm md:text-base text-secondary max-w-sm mx-auto mt-2">{feedback.msg}</p>
             </div>
+
+            {progressSummary}
 
             <div className="w-full grid grid-cols-2 gap-4 mb-8">
               <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col items-center text-center shadow-sm">
@@ -178,7 +182,7 @@ export default function QuizResults({
 
             {/* Questions list */}
             <div className="flex flex-col gap-5 mb-8 max-h-[600px] overflow-y-auto pr-1">
-              {questionsToReview.map((q, i) => {
+              {questionsToReview.map((q) => {
                 const userChoiceIdx = userAnswers?.[q.id];
                 const wasAnswered = userChoiceIdx !== undefined && userChoiceIdx !== null;
                 const isMistake = incorrectQuestionIds.includes(q.id);

@@ -9,12 +9,17 @@ import { INITIAL_PROFILE, INITIAL_QUIZZES, INITIAL_DECKS } from '@/lib/data/init
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/db/supabase-browser';
 import { showToast } from '@/lib/utils/toast';
+import { progressStats, studyDay, percentage, type Attempt } from '@/lib/progress/stats';
+import { readAttempts, writeAttempts, mergeAttempts, syncAttempt, fromDatabase, databaseQuizId } from '@/lib/progress/storage';
 import type { Json } from '@/types/database';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface NankiStore {
   profile: UserProfile;
+  attempts: Attempt[];
+  userId: string;
+  retrySync: () => Promise<void>;
   quizzes: Quiz[];
   decks: Deck[];
   loading: boolean;
@@ -28,7 +33,7 @@ interface NankiStore {
   handleSaveDeck: (deck: Deck) => void;
   handleDeleteQuiz: (id: string) => void;
   handleDeleteDeck: (id: string) => void;
-  handleCompleteQuizPlay: (quizId: string, correct: number, wrong: number) => void;
+  handleCompleteQuizPlay: (quizId: string, answers: Record<string, number | null>, attemptId: string) => string;
   resetAllState: () => void;
 }
 
@@ -74,10 +79,50 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   const userIdRef = useRef<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
-  const [quizzes, setQuizzes] = useState<Quiz[]>(INITIAL_QUIZZES);
+  const [quizzes, setQuizzes] = useState<Quiz[]>(INITIAL_QUIZZES.map(q => ({ ...q, masteredPercentage: 0 })));
   const [decks, setDecks] = useState<Deck[]>(INITIAL_DECKS);
   const [loading, setLoading] = useState(true);
   const [showCreatorSelector, setShowCreatorSelector] = useState(false);
+
+  const [userId, setUserId] = useState('guest');
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const attemptsRef = useRef<Attempt[]>([]);
+  const syncing = useRef(false);
+  const [today, setToday] = useState(() => studyDay());
+  useEffect(() => {
+    const timer = setInterval(() => setToday(studyDay()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const commitAttempts = useCallback((next: Attempt[], owner: string) => {
+    const merged = mergeAttempts(readAttempts(owner), next);
+    attemptsRef.current = merged;
+    setAttempts(merged);
+    try { writeAttempts(owner, merged); }
+    catch { showToast.error('Browser storage is unavailable', { description: 'Keep this page open until your results have synced.' }); }
+  }, []);
+
+  const retrySync = useCallback(async () => {
+    const owner = userIdRef.current;
+    if (!owner || syncing.current) return;
+    syncing.current = true;
+    try {
+      let attempt: Attempt | undefined;
+      while ((attempt = attemptsRef.current.find(a => !a.synced))) {
+        await syncAttempt(owner, attempt);
+        if (userIdRef.current !== owner) return;
+        commitAttempts(attemptsRef.current.map(a => a.id === attempt!.id ? { ...a, synced: true } : a), owner);
+      }
+    } catch {
+      showToast.error('Results are waiting to sync', { description: 'Your result is kept in this browser. Retry from your progress history when connected.' });
+    } finally { syncing.current = false; }
+  }, [commitAttempts]);
+
+  useEffect(() => {
+    const retry = () => { void retrySync(); };
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [retrySync]);
 
   // ── Bootstrap: load user + data from Supabase ──────────────────────────────
   useEffect(() => {
@@ -86,10 +131,13 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        commitAttempts(readAttempts('guest'), 'guest');
         setLoading(false);
         return;
       }
       userIdRef.current = user.id;
+      setUserId(user.id);
+      commitAttempts(readAttempts(user.id), user.id);
 
       // Real profile name/avatar
       const { data: profileRow } = await supabase
@@ -115,9 +163,25 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
       if (qErr) {
         showToast.error('Failed to load quizzes', { description: qErr.message });
-      } else if (quizRows && quizRows.length > 0) {
-        setQuizzes(quizRows.map(dbQuizToLocal));
       }
+      const seedIds = await Promise.all(INITIAL_QUIZZES.map(q => databaseQuizId(user.id, q.id)));
+      const ownedQuizzes = (quizRows ?? []).filter(q => !seedIds.includes(q.id)).map(dbQuizToLocal);
+      const allQuizzes = [...ownedQuizzes, ...INITIAL_QUIZZES.map(q => ({ ...q, masteredPercentage: 0 }))];
+      setQuizzes(allQuizzes);
+      // Fetch every page so totals and streaks remain correct beyond 1,000 attempts.
+      const remote: Attempt[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id)
+          .order('completed_at', { ascending: false }).order('id').range(offset, offset + 999);
+        if (error) { showToast.error('Could not load past results', { description: error.message }); break; }
+        for (const row of data ?? []) {
+          const attempt = fromDatabase(row, allQuizzes);
+          if (attempt) remote.push(attempt);
+        }
+        if (!data || data.length < 1000) break;
+      }
+      commitAttempts(mergeAttempts(attemptsRef.current, remote), user.id);
+      void retrySync();
 
       // Fetch decks
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,8 +200,19 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
-    init();
-  }, []);
+    void init().catch(() => showToast.error('Could not load your account. Please reload to retry.')).finally(() => setLoading(false));
+  }, [commitAttempts, retrySync]);
+
+  useEffect(() => {
+    if (loading) return;
+    const { data: { subscription } } = createClient().auth.onAuthStateChange((_event, session) => {
+      if ((session?.user.id ?? null) !== userIdRef.current) {
+        userIdRef.current = null;
+        window.location.reload();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [loading]);
 
   // ── triggerToast (backward compat → Sonner info) ──────────────────────────
   const triggerToast = useCallback((msg: string) => {
@@ -183,7 +258,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
         published: false,
       };
 
-      const { error } = await supabase.from('quizzes').upsert(payload as any);
+      const { error } = await supabase.from('quizzes').upsert(payload);
 
       if (error) {
         showToast.error(
@@ -301,56 +376,23 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     })();
   }, [decks]);
 
-  // ── Complete quiz play ─────────────────────────────────────────────────────
-  const handleCompleteQuizPlay = useCallback((quizId: string, correct: number, wrong: number) => {
-    const total = correct + wrong;
-    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  // Save locally before navigating; the stable attempt ID makes retries idempotent.
+  const handleCompleteQuizPlay = useCallback((quizId: string, answers: Record<string, number | null>, attemptId: string) => {
+    if (attemptsRef.current.some(a => a.id === attemptId)) return attemptId;
+    const quiz = quizzes.find(q => q.id === quizId);
+    if (!quiz || !quiz.questions.length) throw new Error('Quiz unavailable');
+    const correct = quiz.questions.filter(q => answers[q.id] === q.correctOptionIndex).length;
+    const attempt: Attempt = {
+      id: attemptId, quizId, quiz, correct, total: quiz.questions.length, answers,
+      completedAt: new Date().toISOString(), studyDay: studyDay(), synced: false,
+    };
+    commitAttempts(mergeAttempts(attemptsRef.current, [attempt]), userIdRef.current ?? 'guest');
+    void retrySync();
+    return attempt.id;
+  }, [quizzes, commitAttempts, retrySync]);
 
-    let newMasteredPct = pct;
-
-    setProfile(prev => ({
-      ...prev,
-      totalQuizzesTaken: prev.totalQuizzesTaken + 1,
-      xpProgress: Math.min(100, Math.round((prev.xpProgress + pct) / 2)),
-    }));
-
-    setQuizzes(prev =>
-      prev.map(q => {
-        if (q.id !== quizId) return q;
-        newMasteredPct = Math.max(q.masteredPercentage ?? 0, pct);
-        return { ...q, masteredPercentage: newMasteredPct };
-      })
-    );
-
-    ;(async () => {
-      const supabase = createClient();
-      const uid = userIdRef.current;
-
-      // Update mastery percentage on the quiz row
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: uErr } = await (supabase.from('quizzes') as any)
-        .update({ mastered_percentage: newMasteredPct })
-        .eq('id', quizId);
-
-      if (uErr) {
-        showToast.error('Could not save quiz progress', { description: uErr.message });
-      }
-
-      // Record the attempt
-      if (uid) {
-        const { error: aErr } = await supabase.from('quiz_attempts').insert({
-          quiz_id: quizId,
-          user_id: uid,
-          score: correct,
-          max_score: total,
-          completed_at: new Date().toISOString(),
-        } as any);
-        if (aErr) {
-          showToast.error('Could not record quiz attempt', { description: aErr.message });
-        }
-      }
-    })();
-  }, []);
+  const stats = progressStats(attempts, new Date(`${today}T12:00:00`));
+  const trackedQuizzes = quizzes.map(q => ({ ...q, masteredPercentage: Math.max(0, ...attempts.filter(a => a.quizId === q.id).map(percentage)) }));
 
   // ── Reset (sign-out + redirect home) ──────────────────────────────────────
   const resetAllState = useCallback(() => {
@@ -363,7 +405,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
 
   return (
     <NankiContext.Provider value={{
-      profile, quizzes, decks, loading,
+      profile: { ...profile, ...stats }, quizzes: trackedQuizzes, decks, loading, attempts, userId, retrySync,
       toastMessage: null,
       showCreatorSelector, setShowCreatorSelector,
       triggerToast,

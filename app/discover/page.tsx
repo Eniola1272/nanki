@@ -5,11 +5,10 @@ import { useRouter } from 'next/navigation';
 import NankiShell from '@/components/nanki/NankiShell';
 import { useNankiStore } from '@/lib/nanki-store';
 
-const CATEGORIES = ['All Topics', 'Biology', 'History', 'Physics', 'Computer Science', 'Languages', 'Math'];
-
 export default function DiscoverPage() {
   const router = useRouter();
-  const { quizzes, decks, triggerToast } = useNankiStore();
+  const { quizzes, decks } = useNankiStore();
+  const categories = ['All Topics', ...new Set([...quizzes, ...decks].map(item => item.category).filter(Boolean))];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Topics');
 
@@ -24,11 +23,6 @@ export default function DiscoverPage() {
     const matchesCat = selectedCategory === 'All Topics' || d.category === selectedCategory;
     return matchesSearch && matchesCat;
   });
-
-  const triggerShare = () => {
-    navigator.clipboard.writeText(window.location.href).catch(() => {});
-    triggerToast('Copied study deck sharing link to clipboard! 🔗');
-  };
 
   return (
     <NankiShell>
@@ -58,7 +52,7 @@ export default function DiscoverPage() {
         <div className="space-y-2">
           <h3 className="text-sm font-bold text-secondary uppercase tracking-wider">Categories</h3>
           <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-2">
-            {CATEGORIES.map(cat => {
+            {categories.map(cat => {
               const isActive = selectedCategory === cat;
               return (
                 <button
@@ -77,43 +71,6 @@ export default function DiscoverPage() {
 
         {/* Bento grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-          {/* Trending card */}
-          <div className="md:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 flex flex-col justify-between group hover:shadow-lg transition-shadow">
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <div className="px-2.5 py-1 bg-tertiary-fixed/30 text-tertiary text-[10px] font-bold uppercase rounded tracking-wider">Trending Biology</div>
-                <button onClick={() => triggerToast('Topic bookmarked successfully!')} className="material-symbols-outlined text-outline hover:text-primary cursor-pointer transition-colors">bookmark_add</button>
-              </div>
-              <h3 className="text-xl md:text-2xl font-extrabold text-on-surface mb-2 group-hover:text-primary transition-colors">Cellular Respiration Mastery</h3>
-              <p className="text-xs md:text-sm text-on-surface-variant mb-6 max-w-lg">
-                Comprehensive deep-dive into glycolysis, Krebs cycle, and the electron transport chain. Perfect for AP Biology curriculum preparation.
-              </p>
-            </div>
-            <div className="flex items-center justify-between border-t border-outline-variant/50 pt-3 mt-4">
-              <div className="flex items-center gap-1.5 text-xs text-secondary font-medium">
-                <span className="material-symbols-outlined text-[16px]">style</span>
-                <span>142 Cards</span>
-                <span className="mx-1">•</span>
-                <span>@dr_biology</span>
-              </div>
-              <button onClick={() => router.push('/deck/deck-bio-101/play')} className="bg-primary text-on-primary text-xs font-bold px-4 py-2 rounded-xl hover:bg-primary-container transition-transform active:scale-95 cursor-pointer">
-                Study Now
-              </button>
-            </div>
-          </div>
-
-          {/* Share card */}
-          <div className="md:col-span-4 bg-surface-container-low border border-outline-variant rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-sm">
-            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4 text-primary">
-              <span className="material-symbols-outlined text-[32px]">qr_code_scanner</span>
-            </div>
-            <h3 className="font-bold text-sm text-on-surface mb-1">Share Your Decks</h3>
-            <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">Generate direct import links for study circles.</p>
-            <button onClick={triggerShare} className="w-full border border-primary text-primary px-4 py-2 text-xs rounded-xl font-bold bg-white hover:bg-surface-container-lowest hover:scale-[0.98] active:scale-95 transition-all cursor-pointer">
-              Generate Share Link
-            </button>
-          </div>
-
           {/* Results */}
           {filteredQuizzes.length === 0 && filteredDecks.length === 0 ? (
             <div className="col-span-12 text-center py-12 text-outline">No quizzes or decks match your current query or category filter.</div>

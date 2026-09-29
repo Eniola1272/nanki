@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import ContinueQuiz from '@/components/nanki/ContinueQuiz';
+import ProgressHistory from '@/components/nanki/ProgressHistory';
 import NankiShell from '@/components/nanki/NankiShell';
 import { useNankiStore } from '@/lib/nanki-store';
 
@@ -66,7 +68,7 @@ function EmptyDecks({ onCreate }: { onCreate: () => void }) {
       <span className="material-symbols-outlined text-[40px] text-outline-variant">style</span>
       <div>
         <p className="font-semibold text-on-surface text-sm">No flashcard decks yet.</p>
-        <p className="text-xs text-on-surface-variant mt-0.5">Build a deck and practise with spaced repetition.</p>
+        <p className="text-xs text-on-surface-variant mt-0.5">Build a deck and practise recalling each card.</p>
       </div>
       <button
         onClick={onCreate}
@@ -118,6 +120,8 @@ export default function DashboardPage() {
           )}
         </section>
 
+        <ContinueQuiz />
+
         {/* Recent Quizzes */}
         <section className="space-y-4">
           <div className="flex justify-between items-center">
@@ -168,7 +172,7 @@ export default function DashboardPage() {
                       />
                     </div>
                     <p className="text-[10px] text-secondary text-right font-medium">
-                      {item.masteredPercentage ?? 0}% Mastered
+                      {item.masteredPercentage ?? 0}% best score
                     </p>
                   </div>
                 </div>
@@ -225,6 +229,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        <ProgressHistory />
       </main>
     </NankiShell>
   );

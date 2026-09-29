@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import ProgressHistory from '@/components/nanki/ProgressHistory';
 import NankiShell from '@/components/nanki/NankiShell';
 import { useNankiStore } from '@/lib/nanki-store';
 
 export default function ProfilePage() {
-  const { profile, quizzes, decks, handleDeleteQuiz, handleDeleteDeck, triggerToast } = useNankiStore();
+  const { profile, quizzes, decks, handleDeleteQuiz, handleDeleteDeck } = useNankiStore();
   const [profileTab, setProfileTab] = useState<'quizzes' | 'decks'>('quizzes');
 
   return (
@@ -16,12 +17,7 @@ export default function ProfilePage() {
         <section className="flex flex-col items-center text-center space-y-4 py-4">
           <div className="relative">
             <img alt="Profile Large" className="w-24 h-24 rounded-full object-cover border-4 border-surface-container-lowest shadow-md select-none" src={profile.avatar} />
-            <button
-              onClick={() => triggerToast('Profile avatar customization is disabled in demo mode.')}
-              className="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-2 shadow hover:bg-primary-container transition-transform cursor-pointer active:scale-95"
-            >
-              <span className="material-symbols-outlined text-[16px]">edit</span>
-            </button>
+
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-on-surface">{profile.name}</h1>
@@ -29,7 +25,7 @@ export default function ProfilePage() {
           </div>
           <div className="flex gap-2">
             <span className="bg-surface-container-highest text-on-surface-variant font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">Level {profile.level}</span>
-            <span className="bg-tertiary/10 text-tertiary font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">Top 5% Learner</span>
+            <span className="bg-tertiary/10 text-tertiary font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">{profile.totalQuizzesTaken === 0 ? 'New learner' : 'Active learner'}</span>
           </div>
         </section>
 
@@ -38,12 +34,12 @@ export default function ProfilePage() {
           <div className="col-span-2 md:col-span-1 bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col justify-between items-start shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1.5 text-primary mb-4 font-bold text-xs uppercase tracking-wide">
               <span className="material-symbols-outlined text-primary text-[20px]">psychology</span>
-              <span>Mastery Level</span>
+              <span>Next level progress</span>
             </div>
             <div className="w-full">
               <div className="flex justify-between items-end mb-1">
                 <span className="text-2xl font-extrabold text-on-surface leading-none">{profile.xpProgress}%</span>
-                <span className="text-[11px] text-tertiary font-bold">+2% this week</span>
+                <span className="text-[11px] text-tertiary font-bold">Level {profile.level + 1}</span>
               </div>
               <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
                 <div className="bg-tertiary h-full rounded-full transition-all duration-300" style={{ width: `${profile.xpProgress}%` }}></div>
@@ -58,7 +54,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <span className="text-2xl font-extrabold text-on-surface block leading-none mb-1">{profile.totalQuizzesTaken}</span>
-              <span className="text-xs text-secondary font-medium">Across 8 subjects</span>
+              <span className="text-xs text-secondary font-medium">Completed attempts</span>
             </div>
           </div>
 
@@ -88,6 +84,8 @@ export default function ProfilePage() {
           </div>
         </section>
 
+        <ProgressHistory />
+
         {/* My content tabs */}
         <section className="space-y-4">
           <div className="flex border-b border-outline-variant">
@@ -113,7 +111,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <span className="block text-sm font-bold text-tertiary">{item.masteredPercentage || 0}% avg</span>
+                    <span className="block text-sm font-bold text-tertiary">{item.masteredPercentage || 0}% best</span>
                     <span className="text-[10px] text-outline">{item.questions.length} Questions</span>
                   </div>
                   <button

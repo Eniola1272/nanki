@@ -93,19 +93,14 @@ export const INITIAL_DECKS: Deck[] = [
 ];
 
 export const INITIAL_PROFILE: UserProfile = {
-  name: 'Alex Mercer',
-  bio: 'Neuroscience & Cognitive Psychology student at Central University. Passionate about memory retrieval techniques & active recall.',
-  avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUTIdPw5gFP0TvkbeyIxnrKGHMjovghGB30gh9X7KfN-VamSklom4LCple8ohJz-xskt-dZ85r8yj5U5qcNTCMSZ4e9QVYoi5zfQDxNqCpxluuZa9hy65iFb-bnRoLDpfCbcxHTP6PiB7dwulY6X8KDOJAJ5fEVdS8zFqQdkefS7YHQ3CA6ALVZwAEqmmDSnODcRlX4O7xwOqqRW8bYhz6r9jWXd7hUjUZIBa5M0n61ujbbWVabo0kutdC0THy8_ezPdtSNDIRzn1Q',
-  level: 12,
-  xpProgress: 84,
-  streak: 7,
-  totalQuizzesTaken: 142,
-  masteryPercentage: 84,
-  personalBestStreak: 21,
-  badges: [
-    { id: 'b1', title: 'Quick Thinker', icon: 'emoji_objects', earned: true, colorClass: 'bg-primary/10 text-primary border-primary/20' },
-    { id: 'b2', title: 'Iron Memory', icon: 'memory', earned: true, colorClass: 'bg-tertiary/10 text-tertiary border-tertiary/20' },
-    { id: 'b3', title: 'Streak Master', icon: 'bolt', earned: true, colorClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-    { id: 'b4', title: 'Top Scorer', icon: 'star', earned: false, colorClass: 'bg-surface-container-high text-secondary border-outline-variant' },
-  ],
+  name: 'Learner',
+  bio: 'Your learning journey, one quiz at a time.',
+  avatar: '/avatar.svg',
+  level: 1,
+  xpProgress: 0,
+  streak: 0,
+  totalQuizzesTaken: 0,
+  masteryPercentage: 0,
+  personalBestStreak: 0,
+  badges: [],
 };
