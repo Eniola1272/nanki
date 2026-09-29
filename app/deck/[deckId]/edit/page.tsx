@@ -13,11 +13,13 @@ export default function EditDeckPage({ params }: { params: Promise<{ deckId: str
   const deck = decks.find(d => d.id === deckId) || null;
 
   const handleSave = async (updated: Deck) => {
-    if (await handleSaveDeck(updated)) router.push('/dashboard');
+    const saved = await handleSaveDeck(updated);
+    if (saved) router.push('/dashboard');
+    return saved;
   };
 
   if (loading) return <p className="p-8 text-center">Loading…</p>;
   if (!deck || (deck.ownerId && deck.ownerId !== userId)) return <p className="p-8 text-center">This content is unavailable or belongs to another author.</p>;
 
-  return <DeckEditor deck={deck} onSave={handleSave} onClose={() => router.back()} />;
+  return <DeckEditor key={`${userId}:${deckId}`} deck={deck} onSave={handleSave} onClose={() => router.back()} />;
 }

@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useNankiStore } from '@/lib/nanki-store';
+import { editorDraftKey } from '@/lib/editor/drafts';
+import { useEditorDraft } from '@/lib/editor/use-editor-draft';
 import VisibilityField from './VisibilityField';
 import type { Deck, Card } from '@/types/nanki';
 
 interface DeckEditorProps {
   deck: Deck | null;
-  onSave: (deck: Deck) => Promise<void>;
+  onSave: (deck: Deck) => Promise<boolean>;
   onClose: () => void;
 }
 
 export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
   const [published, setPublished] = useState(deck?.published ?? false);
+  const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [title, setTitle] = useState(deck?.title || '');
@@ -22,6 +26,9 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
   const [extraInput, setExtraInput] = useState('');
   const [cards, setCards] = useState<Card[]>(deck?.cards || []);
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
+
+  const { userId } = useNankiStore();
+  const draft = useEditorDraft(editorDraftKey(userId, 'deck', deck?.id), { published, title, description, category, cards, frontInput, backInput, extraInput }, d => { setPublished(d.published); setTitle(d.title); setDescription(d.description); setCategory(d.category); setCards(d.cards); setFrontInput(d.frontInput); setBackInput(d.backInput); setExtraInput(d.extraInput); });
 
   const addCard = () => {
     if (!frontInput.trim() || !backInput.trim()) { alert('Please fill out both Front and Back details.'); return; }
@@ -41,10 +48,12 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
 
   const handleSave = async () => {
     if (savingRef.current) return;
+    if (frontInput.trim() || backInput.trim() || extraInput.trim()) { setSaveError('Add the card you are writing before saving the deck. Your draft is preserved.'); return; }
+    setSaveError('');
     savingRef.current = true;
     setSaving(true);
     try {
-      await onSave({
+      const saved = await onSave({
         published,
         id: deck?.id || `deck-${Date.now()}`,
         title: title.trim() || 'Untitled Flashcards',
@@ -53,24 +62,29 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
         author: deck?.author || '@you',
         cards,
       });
+      if (saved) draft.clear();
     } finally { savingRef.current = false; setSaving(false); }
   };
 
   return (
     <div className="min-h-screen bg-surface text-on-surface font-sans flex flex-col antialiased pb-20">
+      <fieldset disabled={saving || !draft.ready} className="contents">
       <header className="fixed top-0 w-full z-40 bg-surface-container-lowest border-b border-outline-variant shadow-sm px-4 py-3">
         <div className="max-w-[800px] mx-auto w-full flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">
+            <button onClick={() => draft.close(onClose)} className="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-[24px]">close</span>
             </button>
             <h1 className="font-title-md text-base md:text-lg text-on-surface font-bold">{deck ? 'Edit Flashcards' : 'New Flashcards'}</h1>
           </div>
-          <button disabled={saving} onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">{saving ? 'Saving…' : 'Save Deck'}</button>
+          <button disabled={saving || !draft.ready} onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">{saving ? 'Saving…' : 'Save Deck'}</button>
         </div>
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto pt-20 px-4 flex flex-col gap-6">
+        <p role="status" className="text-xs text-secondary">{draft.restored ? 'Restored your draft. ' : ''}{draft.status || 'Edits are autosaved on this device. Click Save to update your account.'}</p>
+        {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
+        {(draft.restored || draft.status) && <button onClick={draft.discard} className="text-xs text-secondary underline self-start">Discard device draft</button>}
         <VisibilityField published={published} onChange={setPublished} />
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
@@ -162,6 +176,7 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
           )}
         </div>
       </main>
+      </fieldset>
     </div>
   );
 }

@@ -25,6 +25,10 @@ test('community migration enforces real PostgreSQL privacy and vote constraints'
     `);
     await db.exec(fs.readFileSync('supabase/setup.sql', 'utf8'));
     await db.exec(fs.readFileSync('supabase/decks-migration.sql', 'utf8'));
+    await db.exec(fs.readFileSync('supabase/blog-migration.sql', 'utf8'));
+    await db.exec('grant select, update on public.profiles to authenticated; grant update(is_admin) on public.profiles to authenticated;');
+    await db.exec(fs.readFileSync('supabase/learning-memory-migration.sql', 'utf8'));
+    await db.exec(fs.readFileSync('supabase/learning-memory-migration.sql', 'utf8'));
     const migration = fs.readFileSync('supabase/community-migration.sql', 'utf8');
     await db.exec(migration);
     await db.exec(migration); // Deployment retries are safe.
@@ -44,6 +48,27 @@ test('community migration enforces real PostgreSQL privacy and vote constraints'
     };
     const like = (userId, column, id) => db.query(`insert into public.content_likes(user_id, ${column}) values ($1, $2)`, [userId, id]);
 
+    await t.test('profile edits cannot escalate admin/premium or alter billing identifiers', async () => {
+      await asUser(learner);
+      await db.query(`update public.profiles set name = 'Learner', avatar_url = '/avatar.svg' where id = '${learner}'`);
+      for (const field of ['is_admin', 'is_premium']) {
+        await assert.rejects(db.query(`update public.profiles set ${field} = true where id = '${learner}'`), e => e.code === '42501');
+      }
+      await assert.rejects(db.query(`update public.profiles set stripe_customer_id = 'forged' where id = '${learner}'`), e => e.code === '42501');
+      assert.equal((await db.query(`update public.profiles set name = 'Changed' where id = '${author}' returning id`)).rows.length, 0);
+    });
+    await t.test('flashcard sessions persist once and remain isolated by account', async () => {
+      await asUser(learner);
+      const insert = `insert into public.flashcard_sessions(id, user_id, deck_id, deck_snapshot, cards_reviewed, completed_at, study_day) values ('30000000-0000-4000-8000-000000000001', '${learner}', 'starter', '{"title":"Biology","cards":[]}', 4, now(), current_date)`;
+      await db.query(insert);
+      await db.query(insert + ' on conflict(id) do nothing');
+      assert.equal((await db.query('select * from public.flashcard_sessions')).rows.length, 1);
+      await asUser(other);
+      assert.equal((await db.query('select * from public.flashcard_sessions')).rows.length, 0);
+      await assert.rejects(db.query(insert.replace('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002')), e => e.code === '42501');
+      await asUser(null);
+      await assert.rejects(db.query('select * from public.flashcard_sessions'), e => e.code === '42501');
+    });
     await t.test('anonymous learners only see public content and cannot vote', async () => {
       await asUser(null);
       assert.equal((await db.query('select * from public.quizzes')).rows.length, 1);

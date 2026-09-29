@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useNankiStore } from '@/lib/nanki-store';
 import LikeButton from './LikeButton';
 import type { Deck, Card } from '@/types/nanki';
 
@@ -10,6 +11,9 @@ interface FlashcardPlayerProps {
 }
 
 export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps) {
+  const { handleCompleteFlashcards, flashcardSessions, userId, retrySync } = useNankiStore();
+  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
+  const session = flashcardSessions.find(row => row.id === sessionId);
   const [complete, setComplete] = useState(false);
   const advancing = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -31,6 +35,7 @@ export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps)
     timers.current.push(setTimeout(() => {
       setIsFlipped(false);
       if (currentIndex + 1 === cards.length) {
+        handleCompleteFlashcards(deck, sessionId);
         setComplete(true);
         setSlideState('normal');
         advancing.current = false;
@@ -48,10 +53,11 @@ export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps)
         <span className="material-symbols-outlined text-[72px]" aria-hidden="true">{complete ? 'celebration' : 'style'}</span>
         <h1 className="text-3xl font-extrabold">{complete ? 'Congratulations, you are all done!' : 'No flashcards yet'}</h1>
         <p>{complete ? `You reviewed all ${cards.length} cards in ${deck.title}.` : 'Add some cards to this deck to start studying.'}</p>
+        {complete && <div className="text-sm space-y-2"><p>+{10 + cards.length} XP · {session?.synced ? 'Saved to your account' : userId === 'guest' ? 'Saved on this device' : 'Saved on this device · waiting to sync'}</p>{!session?.synced && userId !== 'guest' && <button className="underline" onClick={() => void retrySync()}>Retry sync</button>}</div>}
         {complete && <LikeButton kind="deck" id={deck.id} />}
         <div className="flex flex-wrap justify-center gap-3">
           <button onClick={onClose} className="rounded-full bg-white text-primary px-6 py-3 font-bold">Done</button>
-          {complete && <button onClick={() => { setCurrentIndex(0); setIsFlipped(false); setComplete(false); }} className="rounded-full border border-white/40 px-6 py-3 font-bold">Study again</button>}
+          {complete && <button onClick={() => { setSessionId(crypto.randomUUID()); setCurrentIndex(0); setIsFlipped(false); setComplete(false); }} className="rounded-full border border-white/40 px-6 py-3 font-bold">Study again</button>}
         </div>
       </main>
     </div>

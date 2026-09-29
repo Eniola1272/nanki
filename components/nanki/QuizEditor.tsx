@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useNankiStore } from '@/lib/nanki-store';
+import { editorDraftKey } from '@/lib/editor/drafts';
+import { useEditorDraft } from '@/lib/editor/use-editor-draft';
 import VisibilityField from './VisibilityField';
 import type { Quiz, Question } from '@/types/nanki';
 import { OBGYN_QUIZ } from '@/lib/data/obgyn-quiz';
 
 interface QuizEditorProps {
   quiz: Quiz | null;
-  onSave: (quiz: Quiz) => Promise<void>;
+  onSave: (quiz: Quiz) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -115,6 +118,7 @@ function parseQuestionsFromText(text: string): Question[] {
 
 export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
   const [published, setPublished] = useState(quiz?.published ?? false);
+  const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [title, setTitle] = useState(quiz?.title || '');
@@ -126,6 +130,9 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
 
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkText, setBulkText] = useState('');
+
+  const { userId } = useNankiStore();
+  const draft = useEditorDraft(editorDraftKey(userId, 'quiz', quiz?.id), { published, title, description, category, questions, bulkText }, d => { setPublished(d.published); setTitle(d.title); setDescription(d.description); setCategory(d.category); setQuestions(d.questions); setBulkText(d.bulkText); });
 
   const generateUuid = () =>
     typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -166,11 +173,13 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
 
   const handleSave = async () => {
     if (savingRef.current) return;
+    if (bulkText.trim()) { setSaveError('Apply or clear the pasted questions before saving. Your draft is preserved.'); return; }
+    setSaveError('');
     savingRef.current = true;
     setSaving(true);
     try {
       const finalId = quiz?.id || generateUuid();
-      await onSave({
+      const saved = await onSave({
         published,
         id: finalId,
         title: title.trim() || 'Untitled Quiz',
@@ -179,6 +188,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
         masteredPercentage: quiz?.masteredPercentage || 0,
         questions: questions.map(q => ({ ...q, text: q.text.trim() || 'Untitled Question' })),
       });
+      if (saved) draft.clear();
     } finally { savingRef.current = false; setSaving(false); }
   };
 
@@ -209,10 +219,11 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
 
   return (
     <div className="min-h-screen bg-surface text-on-surface font-sans flex flex-col antialiased pb-20">
+      <fieldset disabled={saving || !draft.ready} className="contents">
       <header className="fixed top-0 w-full z-40 bg-surface-container-lowest border-b border-outline-variant shadow-sm px-4 py-3">
         <div className="max-w-[800px] mx-auto w-full flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">
+            <button onClick={() => draft.close(onClose)} className="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-[24px]">close</span>
             </button>
             <h1 className="font-title-md text-base md:text-lg text-on-surface font-bold">{quiz ? 'Edit Quiz' : 'New Quiz'}</h1>
@@ -226,12 +237,15 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
               <span className="material-symbols-outlined text-[18px] text-primary">playlist_add</span>
               <span>Bulk Import</span>
             </button>
-            <button disabled={saving} onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">{saving ? 'Saving…' : 'Save'}</button>
+            <button disabled={saving || !draft.ready} onClick={handleSave} className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md hover:bg-primary-container active:scale-95 transition-all cursor-pointer shadow-sm text-sm">{saving ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto pt-20 px-4 flex flex-col gap-6">
+        <p role="status" className="text-xs text-secondary">{draft.restored ? 'Restored your draft. ' : ''}{draft.status || 'Edits are autosaved on this device. Click Save to update your account.'}</p>
+        {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
+        {(draft.restored || draft.status) && <button onClick={draft.discard} className="text-xs text-secondary underline self-start">Discard device draft</button>}
         <VisibilityField published={published} onChange={setPublished} />
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
@@ -417,6 +431,7 @@ C. Nonoxynol-9 *`}
           </div>
         </div>
       )}
+      </fieldset>
     </div>
   );
 }

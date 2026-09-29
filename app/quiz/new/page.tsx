@@ -7,11 +7,14 @@ import type { Quiz } from '@/types/nanki';
 
 export default function NewQuizPage() {
   const router = useRouter();
-  const { handleSaveQuiz } = useNankiStore();
+  const { handleSaveQuiz, loading, userId } = useNankiStore();
 
   const handleSave = async (quiz: Quiz) => {
-    if (await handleSaveQuiz(quiz)) router.push('/dashboard');
+    const saved = await handleSaveQuiz(quiz);
+    if (saved) router.push('/dashboard');
+    return saved;
   };
 
-  return <QuizEditor quiz={null} onSave={handleSave} onClose={() => router.back()} />;
+  if (loading) return <p className="p-8 text-center">Loading editor…</p>;
+  return <QuizEditor key={userId} quiz={null} onSave={handleSave} onClose={() => router.back()} />;
 }

@@ -11,6 +11,7 @@ import { createClient } from '@/lib/db/supabase-browser';
 import { showToast } from '@/lib/utils/toast';
 import { progressStats, studyDay, percentage, type Attempt } from '@/lib/progress/stats';
 import { readAttempts, writeAttempts, mergeAttempts, syncAttempt, fromDatabase, databaseQuizId } from '@/lib/progress/storage';
+import { type FlashcardSession, flashcardKey, readFlashcards, mergeFlashcards, syncFlashcard, flashcardFromDatabase } from '@/lib/progress/flashcards';
 import type { Json, DbQuiz, Database } from '@/types/database';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -18,6 +19,8 @@ import type { Json, DbQuiz, Database } from '@/types/database';
 interface NankiStore {
   profile: UserProfile;
   attempts: Attempt[];
+  flashcardSessions: FlashcardSession[];
+  handleCompleteFlashcards: (deck: Deck, sessionId: string) => void;
   userId: string;
   retrySync: () => Promise<void>;
   quizzes: Quiz[];
@@ -95,6 +98,15 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const attemptsRef = useRef<Attempt[]>([]);
   const syncing = useRef(false);
+  const [flashcardSessions, setFlashcardSessions] = useState<FlashcardSession[]>([]);
+  const flashcardsRef = useRef<FlashcardSession[]>([]);
+  const commitFlashcards = useCallback((rows: FlashcardSession[], owner: string) => {
+    const merged = mergeFlashcards(readFlashcards(owner), rows);
+    flashcardsRef.current = merged;
+    setFlashcardSessions(merged);
+    try { localStorage.setItem(flashcardKey(owner), JSON.stringify(merged)); }
+    catch { showToast.error('Cannot save flashcard progress in this browser. Keep this page open until synced.'); }
+  }, []);
   const [today, setToday] = useState(() => studyDay());
   useEffect(() => {
     const timer = setInterval(() => setToday(studyDay()), 60000);
@@ -120,10 +132,16 @@ export function NankiProvider({ children }: { children: ReactNode }) {
         if (userIdRef.current !== owner) return;
         commitAttempts(attemptsRef.current.map(a => a.id === attempt!.id ? { ...a, synced: true } : a), owner);
       }
+      let session: FlashcardSession | undefined;
+      while ((session = flashcardsRef.current.find(row => !row.synced))) {
+        await syncFlashcard(owner, session);
+        if (userIdRef.current !== owner) return;
+        commitFlashcards(flashcardsRef.current.map(row => row.id === session!.id ? { ...row, synced: true } : row), owner);
+      }
     } catch {
       showToast.error('Results are waiting to sync', { description: 'Your result is kept in this browser. Retry from your progress history when connected.' });
     } finally { syncing.current = false; }
-  }, [commitAttempts]);
+  }, [commitAttempts, commitFlashcards]);
 
   useEffect(() => {
     const retry = () => { void retrySync(); };
@@ -161,6 +179,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       userIdRef.current = user?.id ?? null;
       setUserId(owner);
       commitAttempts(readAttempts(owner), owner);
+      commitFlashcards(readFlashcards(owner), owner);
       if (user) {
         const { data: profileRow } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single();
         if (cancelled) return;
@@ -206,12 +225,21 @@ export function NankiProvider({ children }: { children: ReactNode }) {
           if (!data || data.length < 1000) break;
         }
         commitAttempts(mergeAttempts(attemptsRef.current, remote), user.id);
+        const sessions: FlashcardSession[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const { data, error } = await supabase.from('flashcard_sessions').select('*').eq('user_id', user.id).order('completed_at', { ascending: false }).order('id').range(offset, offset + 999);
+          if (cancelled) return;
+          if (error) { showToast.error('Could not load flashcard history. Device records are still available.'); break; }
+          sessions.push(...(data ?? []).map(flashcardFromDatabase));
+          if (!data || data.length < 1000) break;
+        }
+        commitFlashcards(mergeFlashcards(flashcardsRef.current, sessions), owner);
         void retrySync();
       }
     };
     void init().catch(() => { if (!cancelled) showToast.error('Could not load your account. Please reload to retry.'); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [commitAttempts, retrySync, refreshLikes]);
+  }, [commitAttempts, commitFlashcards, retrySync, refreshLikes]);
 
   useEffect(() => {
     if (loading) return;
@@ -346,7 +374,14 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     return attempt.id;
   }, [quizzes, commitAttempts, retrySync]);
 
-  const stats = progressStats(attempts, new Date(`${today}T12:00:00`));
+  const handleCompleteFlashcards = useCallback((deck: Deck, sessionId: string) => {
+    if (!deck.cards.length || flashcardsRef.current.some(row => row.id === sessionId)) return;
+    const session: FlashcardSession = { id: sessionId, deckId: deck.id, deck, cardsReviewed: deck.cards.length, completedAt: new Date().toISOString(), studyDay: studyDay(), synced: false };
+    commitFlashcards(mergeFlashcards(flashcardsRef.current, [session]), userIdRef.current ?? 'guest');
+    void retrySync();
+  }, [commitFlashcards, retrySync]);
+
+  const stats = progressStats(attempts, new Date(`${today}T12:00:00`), flashcardSessions);
   const trackedQuizzes = quizzes.map(q => ({ ...q, masteredPercentage: Math.max(0, ...attempts.filter(a => a.quizId === q.id).map(percentage)) }));
 
   const resetAllState = useCallback(async () => {
@@ -359,6 +394,8 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       userIdRef.current = null;
       attemptsRef.current = [];
       setAttempts([]);
+      flashcardsRef.current = [];
+      setFlashcardSessions([]);
       setProfile(INITIAL_PROFILE);
       setQuizzes([]);
       setDecks([]);
@@ -381,6 +418,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       handleSaveQuiz, handleSaveDeck,
       handleDeleteQuiz, handleDeleteDeck,
       handleCompleteQuizPlay,
+      flashcardSessions, handleCompleteFlashcards,
       resetAllState, signingOut, likesAvailable, toggleLike,
     }}>
       {children}

@@ -231,6 +231,12 @@ export interface Database {
         }
         Relationships: []
       }
+      flashcard_sessions: {
+        Row: { id: string; user_id: string; deck_id: string; deck_snapshot: Json; cards_reviewed: number; completed_at: string; study_day: string }
+        Insert: { id: string; user_id: string; deck_id: string; deck_snapshot: Json; cards_reviewed: number; completed_at: string; study_day: string }
+        Update: { [_ in never]: never }
+        Relationships: []
+      }
       content_likes: {
         Row: { id: string; user_id: string; quiz_id: string | null; deck_id: string | null; created_at: string }
         Insert: { id?: string; user_id: string; quiz_id?: string | null; deck_id?: string | null }

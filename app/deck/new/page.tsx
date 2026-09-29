@@ -7,11 +7,14 @@ import type { Deck } from '@/types/nanki';
 
 export default function NewDeckPage() {
   const router = useRouter();
-  const { handleSaveDeck } = useNankiStore();
+  const { handleSaveDeck, loading, userId } = useNankiStore();
 
   const handleSave = async (deck: Deck) => {
-    if (await handleSaveDeck(deck)) router.push('/dashboard');
+    const saved = await handleSaveDeck(deck);
+    if (saved) router.push('/dashboard');
+    return saved;
   };
 
-  return <DeckEditor deck={null} onSave={handleSave} onClose={() => router.back()} />;
+  if (loading) return <p className="p-8 text-center">Loading editor…</p>;
+  return <DeckEditor key={userId} deck={null} onSave={handleSave} onClose={() => router.back()} />;
 }

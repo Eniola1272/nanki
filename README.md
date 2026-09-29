@@ -102,3 +102,31 @@ NODE_PATH=/tmp/nanki-db-check/node_modules node --test tests/community-db.cjs
 
 These tests load the actual setup and migration SQL and exercise anonymous,
 author, and learner roles without accessing the hosted database.
+
+## Profile permissions, flashcard history, and editor drafts
+
+Apply `supabase/learning-memory-migration.sql` after the setup, decks, and blog
+migrations. It removes broad client profile-update privileges and permits only
+`name` and `avatar_url`; existing row policies still restrict updates to the
+signed-in user's own row. Admin, premium, billing, email, and identity fields must
+be changed by a trusted backend. The service role's privileges are unchanged.
+
+The same migration adds private, immutable `flashcard_sessions` records with deck
+snapshots. Completing an entire deck earns 10 XP plus 1 XP per card reviewed and
+counts toward the daily streak. Sessions appear in progress history; quiz
+accuracy remains quiz-only. Partial sessions do not earn completion XP. These are
+review counts, not recall scores or spaced-repetition scheduling. Completed
+sessions are cached per account and retried through the existing sync controls.
+
+Quiz and deck editors autosave unpublished drafts to this browser, scoped by
+account, content type, and content ID. Reopening the same editor restores the
+draft, including visibility, pasted quiz text, and an unfinished flashcard.
+Explicit Save still controls cloud changes/publication. Successful saves clear
+the draft; failed saves preserve it. Leaving modified editors warns the learner,
+and drafts can be discarded to restore the saved version. Drafts do not sync
+across devices. Local-storage failures are shown rather than reported as saves.
+
+`npm test` covers the combined streak/XP rules and draft isolation. The isolated
+PostgreSQL tests in `tests/community-db.cjs` also verify privileged profile fields,
+flashcard history isolation, and duplicate session protection. This migration
+has been tested locally; it is not automatically applied to the hosted database.
