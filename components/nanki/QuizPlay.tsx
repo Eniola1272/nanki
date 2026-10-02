@@ -64,7 +64,7 @@ export default function QuizPlay({ quiz, userId, onClose, onComplete }: QuizPlay
   const canAdvance = tf || selectedIdx !== null;
   if (!questions.every(validQuestion)) return <div className="p-8"><p>This quiz has an incomplete True/False answer key. Edit it before playing.</p><button onClick={onClose}>Back</button></div>;
   if (!draft.started) return <div className="min-h-screen bg-surface flex items-center justify-center p-6">
-    <main className="max-w-xl w-full rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 space-y-5">
+    <main className="max-w-xl w-full rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 space-y-5">
       <h1 className="text-2xl font-bold">{quiz.title}</h1>
       <p className="text-sm text-secondary">{quiz.description}</p>
       <p>{questions.length} questions · {questions.reduce((sum, q) => sum + (q.type === 'true-false' ? q.options.length : 1), 0)} marks</p>
@@ -104,7 +104,7 @@ export default function QuizPlay({ quiz, userId, onClose, onComplete }: QuizPlay
           </div>
         </div>
 
-        <div className="w-full bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 md:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] z-10">
+        <div className="w-full bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 md:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] z-10">
           <h2 className="font-headline-lg-mobile md:font-headline-lg text-lg md:text-2xl text-on-surface mb-8 text-center leading-snug font-bold">{currentQuestion.text}</h2>
           <div className="flex flex-col gap-3">
             {tf && <p className="text-xs text-secondary">Answer each statement independently. {draft.negativeMarking ? 'Wrong answers: −0.5 each.' : 'No negative marking.'} Leave a statement unanswered to score 0.</p>}

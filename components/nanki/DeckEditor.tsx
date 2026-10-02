@@ -86,7 +86,7 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
         {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
         {(draft.restored || draft.status) && <button onClick={draft.discard} className="text-xs text-secondary underline self-start">Discard device draft</button>}
         <VisibilityField published={published} onChange={setPublished} />
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Flashcard Deck Title (e.g. Molecular Biology)"
               className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 p-0 py-2 font-bold text-on-surface placeholder:text-outline text-lg md:text-2xl transition-colors focus:outline-none" />
@@ -104,7 +104,7 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
           </div>
         </section>
 
-        <section className="bg-surface-container-lowest rounded-2xl border border-outline-variant p-5 shadow-sm">
+        <section className="bg-surface-container-lowest rounded-3xl border border-outline-variant p-5 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             <div className="flex flex-col gap-2">
               <label className="font-title-md text-sm font-bold text-on-surface">Front side (Question)</label>
@@ -142,7 +142,7 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
         <div>
           <h2 className="font-title-md text-base md:text-lg text-on-background font-bold mb-4">Cards in Deck ({cards.length})</h2>
           {cards.length === 0 ? (
-            <div className="text-center py-10 text-outline border border-dashed border-outline-variant rounded-2xl bg-surface-container-lowest">
+            <div className="text-center py-10 text-outline border border-dashed border-outline-variant rounded-3xl bg-surface-container-lowest">
               No cards added yet. Fill in Front & Back fields above to insert questions!
             </div>
           ) : (

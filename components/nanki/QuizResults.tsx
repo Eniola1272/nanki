@@ -83,7 +83,7 @@ export default function QuizResults({
             {progressSummary}
 
             <div className="w-full grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col items-center text-center shadow-sm">
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-4 flex flex-col items-center text-center shadow-sm">
                 <div className="w-10 h-10 rounded-full bg-tertiary-fixed/40 flex items-center justify-center mb-2">
                   <span className="material-symbols-outlined text-tertiary text-[20px] fill">check_circle</span>
                 </div>
@@ -186,13 +186,13 @@ export default function QuizResults({
             {/* Questions list */}
             <div className="flex flex-col gap-5 mb-8 max-h-[600px] overflow-y-auto pr-1">
               {questionsToReview.map((q) => {
-                if (q.type === 'true-false') return <article key={q.id} className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4">
+                if (q.type === 'true-false') return <article key={q.id} className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4">
                   <h3 className="font-bold">Question {quiz.questions.findIndex(item => item.id === q.id) + 1}: {q.text}</h3>
                   {q.options.map((option, index) => {
                     const answer = userAnswers[branchKey(q.id, index)];
                     const expected = q.correctTruthValues?.[index];
                     const correct = answer === Number(expected);
-                    return <div key={index} className={`rounded-xl border p-3 text-sm space-y-2 ${correct ? 'border-tertiary/40 bg-tertiary/5' : 'border-error/40 bg-error/5'}`}>
+                    return <div key={index} className={`rounded-xl border p-3 text-sm space-y-2 ${correct ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-error/40 bg-error/5'}`}>
                       <p className="font-semibold">{String.fromCharCode(65 + index)}. {option}</p>
                       <p>Your answer: {answer === 1 ? 'True' : answer === 0 ? 'False' : 'Unanswered'} · Correct answer: {expected ? 'True' : 'False'} · {correct ? 'Correct' : answer == null ? 'Not answered' : 'Incorrect'}</p>
                       {q.branchExplanations?.[index] && <p className="text-secondary">{q.branchExplanations[index]}</p>}
@@ -208,7 +208,7 @@ export default function QuizResults({
                 return (
                   <div
                     key={q.id}
-                    className="bg-surface-container-lowest border border-outline-variant p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                    className="bg-surface-container-lowest border border-outline-variant p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center justify-between mb-2.5">
                       <div className="flex items-center gap-2">

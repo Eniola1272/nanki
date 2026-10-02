@@ -164,7 +164,7 @@ export default function PostForm({ post, authorId }: PostFormProps) {
 
         {/* Cover preview */}
         {coverImage && (
-          <div className="rounded-2xl overflow-hidden max-h-56">
+          <div className="rounded-3xl overflow-hidden max-h-56">
             <img src={coverImage} alt="Cover preview" className="w-full object-cover max-h-56" />
           </div>
         )}
@@ -197,7 +197,7 @@ export default function PostForm({ post, authorId }: PostFormProps) {
           <button
             onClick={() => save(true)}
             disabled={saving}
-            className="flex items-center gap-2 bg-primary text-on-primary font-bold text-sm px-6 py-2.5 rounded-full hover:bg-primary-container transition-all shadow-[0px_4px_16px_rgba(0,64,126,0.2)] disabled:opacity-50"
+            className="flex items-center gap-2 bg-primary text-on-primary font-bold text-sm px-6 py-2.5 rounded-full hover:bg-primary-container transition-all shadow-[0px_4px_16px_rgba(103,64,153,0.2)] disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[16px]">publish</span>
             {post?.published ? 'Update & keep published' : 'Publish'}

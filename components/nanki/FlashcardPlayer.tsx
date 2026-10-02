@@ -94,11 +94,11 @@ export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps)
           style={{ perspective: '1200px' }}
         >
           <div
-            className="w-full h-full relative transition-transform duration-500 rounded-2xl shadow-[0_12px_44px_rgba(0,0,0,0.3)] border border-white/10"
+            className="w-full h-full relative transition-transform duration-500 rounded-3xl shadow-[0_12px_44px_rgba(0,0,0,0.3)] border border-white/10"
             style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'none' }}
           >
             {/* FRONT */}
-            <div className="absolute inset-0 w-full h-full bg-surface-container-lowest text-on-surface rounded-2xl flex flex-col items-center justify-center p-8 text-center" style={{ backfaceVisibility: 'hidden' }}>
+            <div className="absolute inset-0 w-full h-full bg-surface-container-lowest text-on-surface rounded-3xl flex flex-col items-center justify-center p-8 text-center" style={{ backfaceVisibility: 'hidden' }}>
               <span className="font-label-md text-xs tracking-wider uppercase text-secondary bg-surface-container-low px-3 py-1 rounded-full mb-6">Question</span>
               <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface text-center px-4 max-h-[70%] overflow-y-auto leading-snug">{currentCard.front}</h2>
               <div className="absolute bottom-6 font-caption text-xs text-outline flex items-center gap-1 opacity-70">
@@ -108,7 +108,7 @@ export default function FlashcardPlayer({ deck, onClose }: FlashcardPlayerProps)
             </div>
 
             {/* BACK */}
-            <div className="absolute inset-0 w-full h-full bg-surface-container-lowest text-on-surface rounded-2xl flex flex-col items-center justify-center p-8 text-center border-2 border-tertiary-container/20" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+            <div className="absolute inset-0 w-full h-full bg-surface-container-lowest text-on-surface rounded-3xl flex flex-col items-center justify-center p-8 text-center border-2 border-tertiary-container/20" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
               <span className="font-label-md text-xs tracking-wider uppercase text-tertiary bg-tertiary/10 px-3 py-1 rounded-full mb-6">Answer</span>
               <div className="flex-1 flex flex-col items-center justify-center w-full overflow-y-auto px-4">
                 <p className="font-body-lg text-lg md:text-xl text-center text-on-surface max-w-prose leading-relaxed">{currentCard.back}</p>

@@ -149,7 +149,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
         {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
         {(draft.restored || draft.status) && <button onClick={draft.discard} className="text-xs text-secondary underline self-start">Discard device draft</button>}
         <VisibilityField published={published} onChange={setPublished} />
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm">
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-5 shadow-sm">
           <div className="flex flex-col gap-3">
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Quiz Title (e.g. Obstetrics & Gynaecology MCQs)"
               className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 p-0 py-2 font-bold text-on-surface placeholder:text-outline text-lg md:text-2xl transition-colors focus:outline-none" />
@@ -167,7 +167,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
 
         <div className="flex flex-col gap-5">
           {questions.map((q, qIndex) => (
-            <article key={q.id} className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 flex flex-col gap-4 relative group shadow-sm hover:shadow-md transition-shadow duration-200">
+            <article key={q.id} className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-5 flex flex-col gap-4 relative group shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex justify-between items-center text-secondary">
                 <div className="flex items-center gap-1 cursor-grab">
                   <span className="material-symbols-outlined text-[20px] select-none text-outline">drag_indicator</span>
@@ -240,7 +240,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
         </div>
 
         <button onClick={addQuestion}
-          className="w-full py-4 border-2 border-dashed border-outline-variant rounded-2xl text-on-surface-variant text-sm md:text-base flex justify-center items-center gap-2 hover:bg-surface-container-low hover:border-outline hover:text-on-surface transition-all cursor-pointer group active:scale-98 shadow-sm">
+          className="w-full py-4 border-2 border-dashed border-outline-variant rounded-3xl text-on-surface-variant text-sm md:text-base flex justify-center items-center gap-2 hover:bg-surface-container-low hover:border-outline hover:text-on-surface transition-all cursor-pointer group active:scale-98 shadow-sm">
           <span className="material-symbols-outlined text-[24px] group-hover:text-primary transition-colors">add_circle</span>
           <span>Add Question</span>
         </button>
@@ -249,7 +249,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
       {/* ── Bulk Import Modal ── */}
       {showBulkModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center pb-3 border-b border-outline-variant">
               <div>
                 <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">

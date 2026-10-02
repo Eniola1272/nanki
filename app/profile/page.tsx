@@ -17,7 +17,7 @@ export default function ProfilePage() {
       <main className="w-full max-w-[800px] mx-auto px-4 py-8 space-y-8 animate-fadeIn">
 
         {/* Profile header */}
-        <section className="flex flex-col items-center text-center space-y-4 py-4">
+        <section className="flex flex-col items-center text-center space-y-4 py-8 px-4 rounded-3xl bg-surface-container-lowest border border-outline-variant">
           <div className="relative">
             <img alt="Profile Large" className="w-24 h-24 rounded-full object-cover border-4 border-surface-container-lowest shadow-md select-none" src={profile.avatar} />
 
@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
         {/* Stats bento */}
         <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="col-span-2 md:col-span-1 bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col justify-between items-start shadow-sm hover:shadow-md transition-shadow">
+          <div className="col-span-2 md:col-span-1 bg-surface-container-lowest border border-outline-variant rounded-3xl p-4 flex flex-col justify-between items-start shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1.5 text-primary mb-4 font-bold text-xs uppercase tracking-wide">
               <span className="material-symbols-outlined text-primary text-[20px]">psychology</span>
               <span>Next level progress</span>
@@ -52,7 +52,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-4 flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-1.5 text-secondary font-bold text-xs uppercase tracking-wide">
               <span className="material-symbols-outlined text-secondary text-[20px]">quiz</span>
               <span>Total Quizzes</span>
@@ -63,7 +63,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-4 flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-1.5 text-tertiary font-bold text-xs uppercase tracking-wide">
               <span className="material-symbols-outlined text-tertiary fill text-[20px]">local_fire_department</span>
               <span>Current Streak</span>
@@ -77,7 +77,7 @@ export default function ProfilePage() {
 
         {/* Badges */}
         <section>
-          <div className="flex justify-between items-center bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 gap-4 overflow-x-auto hide-scrollbar">
+          <div className="flex justify-between items-center bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-4 gap-4 overflow-x-auto hide-scrollbar">
             {profile.badges.map(badge => (
               <div key={badge.id} className="flex-shrink-0 w-24 flex flex-col items-center gap-1">
                 <div className={`w-14 h-14 rounded-full border flex items-center justify-center transition-all ${badge.colorClass}`}>
@@ -105,7 +105,7 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-3">
             {(profileTab === 'quizzes' ? quizzes.length : decks.length) === 0 && <p className="text-sm text-secondary">You haven’t created any {profileTab} yet.</p>}
             {profileTab === 'quizzes' ? quizzes.map(item => (
-              <div key={item.id} className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex items-center justify-between hover:shadow-sm">
+              <div key={item.id} className="bg-surface-container-lowest border border-outline-variant p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between hover:shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
                     <span className="material-symbols-outlined">science</span>
@@ -130,7 +130,7 @@ export default function ProfilePage() {
                 </div>
               </div>
             )) : decks.map(deck => (
-              <div key={deck.id} className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex items-center justify-between hover:shadow-sm">
+              <div key={deck.id} className="bg-surface-container-lowest border border-outline-variant p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between hover:shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
                     <span className="material-symbols-outlined">style</span>

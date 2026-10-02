@@ -1,3 +1,4 @@
+import Brand from '@/components/shared/Brand';
 import { createClient } from '@/lib/db/supabase-server';
 import type { BlogPost } from '@/types/database';
 import Link from 'next/link';
@@ -55,8 +56,7 @@ export default async function BlogPostPage({ params }: Props) {
       <header className="border-b border-outline-variant/40 bg-surface-container-lowest px-4 sm:px-6">
         <div className="max-w-3xl mx-auto h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined fill text-tertiary-container text-[24px]">psychology</span>
-            <span className="text-lg font-extrabold text-primary">Nanki</span>
+            <Brand />
           </Link>
           <Link href="/blog" className="text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
@@ -92,7 +92,7 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* Post body */}
         <article
-          className="prose prose-neutral max-w-none prose-headings:font-extrabold prose-headings:text-on-surface prose-p:text-on-surface-variant prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-on-surface prose-blockquote:border-primary/30 prose-blockquote:text-on-surface-variant prose-code:bg-surface-container prose-code:rounded prose-code:px-1 prose-code:text-sm prose-pre:bg-surface-container prose-pre:rounded-2xl prose-img:rounded-2xl"
+          className="prose prose-neutral max-w-none prose-headings:font-extrabold prose-headings:text-on-surface prose-p:text-on-surface-variant prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-on-surface prose-blockquote:border-primary/30 prose-blockquote:text-on-surface-variant prose-code:bg-surface-container prose-code:rounded prose-code:px-1 prose-code:text-sm prose-pre:bg-surface-container prose-pre:rounded-3xl prose-img:rounded-3xl"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 

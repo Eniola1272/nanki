@@ -59,7 +59,7 @@ export default function BlogEditor({ content, onChange, placeholder = 'Write you
         HTMLAttributes: { class: 'text-primary underline underline-offset-2' },
       }),
       Image.configure({
-        HTMLAttributes: { class: 'rounded-2xl max-w-full my-4' },
+        HTMLAttributes: { class: 'rounded-3xl max-w-full my-4' },
       }),
       Placeholder.configure({ placeholder }),
     ],
@@ -117,7 +117,7 @@ export default function BlogEditor({ content, onChange, placeholder = 'Write you
   }, [content]);
 
   return (
-    <div className="border border-outline-variant/50 rounded-2xl overflow-hidden bg-surface-container-lowest">
+    <div className="border border-outline-variant/50 rounded-3xl overflow-hidden bg-surface-container-lowest">
       {/* Toolbar */}
       <div className="border-b border-outline-variant/40 bg-surface-container-low px-3 py-2 flex flex-wrap items-center gap-0.5">
         {/* Text style */}

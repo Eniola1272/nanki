@@ -16,7 +16,7 @@ function greeting(name: string) {
 
 function QuizCardSkeleton() {
   return (
-    <div className="min-w-[270px] max-w-[270px] bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col shrink-0 animate-pulse">
+    <div className="min-w-[270px] max-w-[270px] bg-surface-container-lowest border border-outline-variant rounded-3xl p-4 flex flex-col shrink-0 animate-pulse">
       <div className="flex justify-between items-start mb-4">
         <div className="h-5 w-20 bg-surface-container-high rounded-lg" />
         <div className="h-5 w-5 bg-surface-container-high rounded-full" />
@@ -33,7 +33,7 @@ function QuizCardSkeleton() {
 
 function DeckCardSkeleton() {
   return (
-    <div className="min-w-[240px] max-w-[240px] aspect-[4/3] bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col justify-center items-center shrink-0 animate-pulse gap-3">
+    <div className="min-w-[240px] max-w-[240px] aspect-[4/3] bg-surface-container-lowest border border-outline-variant rounded-3xl p-4 flex flex-col justify-center items-center shrink-0 animate-pulse gap-3">
       <div className="w-10 h-10 bg-surface-container-high rounded-full" />
       <div className="h-4 w-32 bg-surface-container-high rounded" />
       <div className="h-3 w-16 bg-surface-container rounded" />
@@ -45,7 +45,7 @@ function DeckCardSkeleton() {
 
 function EmptyQuizzes({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="min-w-full flex flex-col items-center justify-center py-10 gap-4 border border-dashed border-outline-variant/60 rounded-2xl text-center px-6">
+    <div className="min-w-full flex flex-col items-center justify-center py-10 gap-4 border border-dashed border-outline-variant/60 rounded-3xl text-center px-6">
       <span className="material-symbols-outlined text-[40px] text-outline-variant">quiz</span>
       <div>
         <p className="font-semibold text-on-surface text-sm">No quizzes yet.</p>
@@ -64,7 +64,7 @@ function EmptyQuizzes({ onCreate }: { onCreate: () => void }) {
 
 function EmptyDecks({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="min-w-full flex flex-col items-center justify-center py-10 gap-4 border border-dashed border-outline-variant/60 rounded-2xl text-center px-6">
+    <div className="min-w-full flex flex-col items-center justify-center py-10 gap-4 border border-dashed border-outline-variant/60 rounded-3xl text-center px-6">
       <span className="material-symbols-outlined text-[40px] text-outline-variant">style</span>
       <div>
         <p className="font-semibold text-on-surface text-sm">No flashcard decks yet.</p>
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       <main className="w-full max-w-[800px] mx-auto px-4 py-8 space-y-8 animate-fadeIn">
 
         {/* Greeting */}
-        <section className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-outline-variant/30 pb-4">
+        <section className="learning-welcome flex flex-col md:flex-row md:justify-between md:items-end gap-4">
           <div>
             {loading ? (
               <div className="space-y-2 animate-pulse">
@@ -110,14 +110,14 @@ export default function DashboardPage() {
                   {greeting(profile.name)}
                 </h2>
                 <p className="text-xs md:text-sm text-on-surface-variant">
-                  Ready to master some new concepts today?
+                  A little practice. A little progress. Every day.
                 </p>
               </>
             )}
           </div>
           {!loading && (
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-tertiary-container rounded-2xl text-on-tertiary-container border border-tertiary-fixed-dim/20 shadow-sm self-start md:self-auto">
-              <span className="material-symbols-outlined fill text-teal-300">local_fire_department</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-tertiary-container rounded-3xl text-on-tertiary-container border border-tertiary-fixed-dim/20 shadow-sm self-start md:self-auto">
+              <span className="material-symbols-outlined fill text-on-tertiary-container">local_fire_department</span>
               <span className="text-xs md:text-sm font-bold">{profile.streak} Day Streak!</span>
             </div>
           )}
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                 <div
                   key={item.id}
                   onClick={() => router.push(`/quiz/${item.id}/play`)}
-                  className="min-w-[270px] max-w-[270px] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-2xl p-4 flex flex-col hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all cursor-pointer shrink-0 relative group"
+                  className="min-w-[270px] max-w-[270px] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-3xl p-4 flex flex-col hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all cursor-pointer shrink-0 relative group"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <span className="px-2.5 py-1 rounded-lg bg-surface-container text-on-surface-variant text-[10px] font-bold uppercase tracking-wide">
@@ -206,7 +206,7 @@ export default function DashboardPage() {
                 <div
                   key={deck.id}
                   onClick={() => router.push(`/deck/${deck.id}/play`)}
-                  className="min-w-[240px] max-w-[240px] aspect-[4/3] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-2xl p-4 flex flex-col justify-center items-center text-center hover:shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all cursor-pointer shrink-0 relative group"
+                  className="min-w-[240px] max-w-[240px] aspect-[4/3] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-3xl p-4 flex flex-col justify-center items-center text-center hover:shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all cursor-pointer shrink-0 relative group"
                 >
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button

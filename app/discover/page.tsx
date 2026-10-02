@@ -19,7 +19,7 @@ export default function DiscoverPage() {
 
   return <NankiShell>
     <main className="w-full max-w-[800px] mx-auto px-4 py-8 space-y-6">
-      <div className="space-y-3">
+      <div className="learning-welcome space-y-5">
         <h1 className="text-2xl md:text-3xl font-extrabold">Find quizzes & flashcards</h1>
         <p className="text-sm text-secondary">Explore public study material. Mark helpful content to help other learners find it.</p>
         <input aria-label="Search quizzes and flashcards" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by topic, title, or keyword…" className="w-full rounded-full border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm" />
@@ -34,7 +34,7 @@ export default function DiscoverPage() {
         {!loading && !likesAvailable && <p className="text-xs text-secondary">Helpful votes are temporarily unavailable. Results are ordered by newest.</p>}
       </div>
       {loading ? <p>Loading study material…</p> : results.length === 0 ? <p className="py-12 text-center text-secondary">No public quizzes or flashcards match your search.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {results.map(({ kind, content }) => <article key={`${kind}:${content.id}`} className="flex flex-col justify-between rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4">
+        {results.map(({ kind, content }) => <article key={`${kind}:${content.id}`} className="flex flex-col justify-between rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4">
           <Link href={`/${kind}/${content.id}/play`} className="block space-y-2 hover:text-primary">
             <p className="text-xs text-secondary">{content.category} · {kind === 'quiz' ? 'Quiz' : 'Flashcards'}{!content.ownerId ? ' · Starter content' : ''}</p>
             <h2 className="font-bold text-lg">{content.title}</h2>

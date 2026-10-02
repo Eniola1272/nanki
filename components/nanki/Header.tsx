@@ -1,5 +1,6 @@
 'use client';
 
+import Brand from '@/components/shared/Brand';
 import { useRouter } from 'next/navigation';
 import { useNankiStore } from '@/lib/nanki-store';
 
@@ -12,21 +13,20 @@ export default function Header({ hideAvatar = false }: HeaderProps) {
   const { profile, userId, resetAllState, signingOut } = useNankiStore();
 
   return (
-    <header className="fixed top-0 w-full z-40 bg-surface-container-lowest border-b border-outline-variant shadow-sm backdrop-blur-md bg-opacity-90">
-      <div className="max-w-[800px] mx-auto w-full flex justify-between items-center px-4 py-3">
-        <div className="flex items-center gap-3">
+    <header className="fixed top-0 w-full z-40 bg-surface/95 backdrop-blur-md">
+      <div className="w-full h-20 flex justify-between items-center gap-3 px-5 md:px-8">
+        <div className="flex items-center gap-3 mr-auto">
           {!hideAvatar && (
             <button
               onClick={() => router.push('/profile')}
-              className="w-10 h-10 rounded-full border border-outline-variant overflow-hidden hover:opacity-85 active:scale-95 transition-all cursor-pointer"
+              className="hidden sm:block w-10 h-10 rounded-full border border-outline-variant overflow-hidden hover:opacity-85 active:scale-95 transition-all cursor-pointer"
               title="View Profile"
             >
               <img src={profile.avatar} alt="Profile Avatar" className="w-full h-full object-cover" />
             </button>
           )}
           <button onClick={() => router.push('/dashboard')} className="flex items-center gap-1 text-left cursor-pointer">
-            <span className="material-symbols-outlined fill text-tertiary-container text-[28px] md:text-[32px]">psychology</span>
-            <span className="text-[22px] md:text-[26px] font-extrabold text-primary tracking-tight">Nanki</span>
+            <Brand />
           </button>
         </div>
 

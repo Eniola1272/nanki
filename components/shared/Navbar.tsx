@@ -71,7 +71,7 @@ export function Navbar({}: NavbarProps) {
       <nav className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="text-xl font-bold">
-            Quiz App
+            nanki.
           </Link>
           <div className="h-8 w-24 animate-pulse bg-muted rounded" />
         </div>
@@ -83,7 +83,7 @@ export function Navbar({}: NavbarProps) {
     <nav className="border-b">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="text-xl font-bold">
-          Quiz App
+          nanki.
         </Link>
 
         <div className="flex items-center gap-4">

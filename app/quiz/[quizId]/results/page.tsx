@@ -29,7 +29,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ quizId: 
       wrongCount={result.total - result.correct}
       incorrectQuestionIds={score.incorrectIds}
       userAnswers={result.answers}
-      progressSummary={<div className="w-full rounded-2xl border border-outline-variant p-4 mb-6 text-sm text-center space-y-2">
+      progressSummary={<div className="w-full rounded-3xl border border-outline-variant p-4 mb-6 text-sm text-center space-y-2">
         <p className="font-bold">{result.netScore ?? result.correct}/{result.total} points · {percentage(result)}% answer accuracy</p>
         <p>{score.correct} correct · {score.wrong} wrong · {score.unanswered} unanswered</p>
         <p>{result.negativeMarking ? `True/False negative marking: −0.5 per wrong branch. ${score.penalty} points deducted.` : 'Negative marking off.'}</p>

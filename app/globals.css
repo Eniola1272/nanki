@@ -48,72 +48,38 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
-
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --radius: 1rem;
+  --background: #f4f3f0;
+  --foreground: #29252e;
+  --card: #ffffff;
+  --card-foreground: #29252e;
+  --popover: #ffffff;
+  --popover-foreground: #29252e;
+  --primary: #674099;
+  --primary-foreground: #ffffff;
+  --secondary: #eee9f3;
+  --secondary-foreground: #513476;
+  --muted: #eeecef;
+  --muted-foreground: #716b77;
+  --accent: #eee7f5;
+  --accent-foreground: #583582;
+  --destructive: #ba3232;
+  --border: #e3dfe6;
+  --input: #ded9e3;
+  --ring: #8763ae;
+  --chart-1: #674099;
+  --chart-2: #987bb6;
+  --chart-3: #527866;
+  --chart-4: #b79159;
+  --chart-5: #b78b9e;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #29252e;
+  --sidebar-primary: #674099;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eee7f5;
+  --sidebar-accent-foreground: #583582;
+  --sidebar-border: #e3dfe6;
+  --sidebar-ring: #8763ae;
 }
 
 @layer base {
@@ -125,61 +91,61 @@
   }
 }
 
-/* ── MD3 Design Tokens (Nanki) ─────────────────────────────────── */
+/* ── Nanki brand palette ─────────────────────────────────── */
 @theme {
   --font-sans: "Plus Jakarta Sans", sans-serif;
 
-  --color-primary: #00407e;
+  --color-primary: #674099;
   --color-on-primary: #ffffff;
-  --color-primary-container: #0057a8;
-  --color-on-primary-container: #b5cfff;
+  --color-primary-container: #55317f;
+  --color-on-primary-container: #f0e6ff;
 
-  --color-secondary: #5b5f61;
+  --color-secondary: #716b77;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #e0e3e6;
-  --color-on-secondary-container: #626567;
+  --color-secondary-container: #ece8ef;
+  --color-on-secondary-container: #655d6e;
 
-  --color-tertiary: #004941;
+  --color-tertiary: #674099;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #006358;
-  --color-on-tertiary-container: #47e4cf;
+  --color-tertiary-container: #55317f;
+  --color-on-tertiary-container: #f0e6ff;
 
-  --color-surface: #f9f9fc;
-  --color-surface-dim: #dadadc;
-  --color-surface-bright: #f9f9fc;
+  --color-surface: #f4f3f0;
+  --color-surface-dim: #d9d8d3;
+  --color-surface-bright: #f4f3f0;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f3f3f6;
-  --color-surface-container: #eeeef0;
-  --color-surface-container-high: #e8e8ea;
-  --color-surface-container-highest: #e2e2e5;
-  --color-on-surface: #1a1c1e;
-  --color-on-surface-variant: #424751;
-  --color-inverse-surface: #2f3133;
-  --color-inverse-on-surface: #f0f0f3;
-  --color-outline: #727783;
-  --color-outline-variant: #c2c6d3;
+  --color-surface-container-low: #f0edef;
+  --color-surface-container: #ebe7ed;
+  --color-surface-container-high: #e7e1eb;
+  --color-surface-container-highest: #ded6e5;
+  --color-on-surface: #29252e;
+  --color-on-surface-variant: #68616f;
+  --color-inverse-surface: #302737;
+  --color-inverse-on-surface: #f6f1fa;
+  --color-outline: #807586;
+  --color-outline-variant: #e0dae5;
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
   --color-on-error-container: #93000a;
 
-  --color-primary-fixed: #d5e3ff;
-  --color-primary-fixed-dim: #a8c8ff;
-  --color-on-primary-fixed: #001b3c;
-  --color-on-primary-fixed-variant: #00468a;
+  --color-primary-fixed: #eee5f7;
+  --color-primary-fixed-dim: #ceb8e3;
+  --color-on-primary-fixed: #30213f;
+  --color-on-primary-fixed-variant: #674099;
 
-  --color-secondary-fixed: #e0e3e6;
-  --color-secondary-fixed-dim: #c4c7ca;
-  --color-on-secondary-fixed: #191c1e;
-  --color-on-secondary-fixed-variant: #44474a;
+  --color-secondary-fixed: #ece8ef;
+  --color-secondary-fixed-dim: #cfc6d6;
+  --color-on-secondary-fixed: #29252e;
+  --color-on-secondary-fixed-variant: #655d6e;
 
-  --color-tertiary-fixed: #62fae3;
-  --color-tertiary-fixed-dim: #3cddc7;
-  --color-on-tertiary-fixed: #00201c;
-  --color-on-tertiary-fixed-variant: #005047;
+  --color-tertiary-fixed: #eee5f7;
+  --color-tertiary-fixed-dim: #ae8fcb;
+  --color-on-tertiary-fixed: #30213f;
+  --color-on-tertiary-fixed-variant: #674099;
 
-  --color-background: #f9f9fc;
-  --color-on-background: #1a1c1e;
+  --color-background: #f4f3f0;
+  --color-on-background: #29252e;
 }
 
 /* Material Symbols icon utilities */
@@ -201,3 +167,20 @@
 
 @keyframes bounceSlight { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-6px); } }
 .animate-bounce-slight { animation: bounceSlight 1.8s ease-in-out infinite; }
+/* Shared interaction and layout foundations. */
+@layer base {
+  body { font-family: "Plus Jakarta Sans", sans-serif; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { letter-spacing: -.035em; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
+  ::selection { background: #e2d2ef; color: #30213f; }
+}
+.brand-wordmark { display: inline-flex; align-items: center; gap: .5rem; color: #29252e; font-size: 1.5rem; font-weight: 800; letter-spacing: -.08em; }
+.brand-wordmark svg { padding: 7px; width: 34px; height: 34px; border-radius: 50%; color: #674099; background: #eee5f7; }
+.brand-wordmark b { color: #674099; }
+.study-content > main { max-width: 1080px; padding: 36px 28px; }
+.learning-welcome { background: #eee7f5; border: 1px solid #e5daed; border-radius: 28px; padding: 32px; }
+@media (max-width: 767px) { .study-content > main { padding: 24px 16px; } .learning-welcome { padding: 24px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

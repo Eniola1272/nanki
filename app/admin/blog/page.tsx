@@ -44,7 +44,7 @@ export default async function AdminBlogPage() {
           </Link>
         </div>
       ) : (
-        <div className="border border-outline-variant/40 rounded-2xl overflow-hidden">
+        <div className="border border-outline-variant/40 rounded-3xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-surface-container-low border-b border-outline-variant/40 text-xs text-on-surface-variant font-semibold uppercase tracking-wide">
               <tr>

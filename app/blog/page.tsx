@@ -1,3 +1,4 @@
+import Brand from '@/components/shared/Brand';
 import { createClient } from '@/lib/db/supabase-server';
 import type { BlogPost } from '@/types/database';
 import Link from 'next/link';
@@ -64,8 +65,7 @@ export default async function BlogPage() {
       <header className="border-b border-outline-variant/40 bg-surface-container-lowest px-4 sm:px-6">
         <div className="max-w-5xl mx-auto h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined fill text-tertiary-container text-[24px]">psychology</span>
-            <span className="text-lg font-extrabold text-primary">Nanki</span>
+            <Brand />
           </Link>
           <Link href="/auth/signin" className="text-sm font-semibold text-primary hover:underline">
             Start learning →

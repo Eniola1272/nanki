@@ -25,7 +25,7 @@ export default function ContinueQuiz() {
   if (loading || !drafts.length) return null;
   return <section className="space-y-3">
     <h2 className="font-bold text-lg">Continue studying</h2>
-    {drafts.map(draft => <Link key={draft.id} href={`/quiz/${draft.id}/play`} className="block rounded-2xl p-4 border border-primary bg-primary/5">
+    {drafts.map(draft => <Link key={draft.id} href={`/quiz/${draft.id}/play`} className="block rounded-3xl p-4 border border-primary bg-primary/5">
       <p className="font-bold">{draft.title}</p>
       <p className="text-sm text-secondary mt-1">Resume at question {draft.question} of {draft.total} · Saved on this device →</p>
     </Link>)}

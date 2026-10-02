@@ -430,7 +430,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       {/* ── Create selector modal ─────────────────────────────────────────── */}
       {showCreatorSelector && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-surface-container-lowest max-w-sm w-full rounded-2xl p-6 border border-outline-variant shadow-xl">
+          <div className="bg-surface-container-lowest max-w-sm w-full rounded-3xl p-7 border border-outline-variant shadow-xl">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-extrabold flex items-center gap-1.5 text-on-surface">
                 <span className="material-symbols-outlined text-primary">add_circle</span>
@@ -449,14 +449,14 @@ export function NankiProvider({ children }: { children: ReactNode }) {
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => { setShowCreatorSelector(false); router.push('/quiz/new'); }}
-                className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold py-3 px-4 rounded-xl flex items-center gap-2 justify-center cursor-pointer transition-transform active:scale-95 shadow-sm text-sm"
+                className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold py-3 px-4 rounded-full flex items-center gap-2 justify-center cursor-pointer transition-transform active:scale-95 shadow-sm text-sm"
               >
                 <span className="material-symbols-outlined text-[20px]">quiz</span>
                 Create Practice Quiz
               </button>
               <button
                 onClick={() => { setShowCreatorSelector(false); router.push('/deck/new'); }}
-                className="w-full bg-surface-container-lowest hover:bg-surface-container-low text-primary border border-primary font-bold py-3 px-4 rounded-xl flex items-center gap-2 justify-center cursor-pointer transition-transform active:scale-95 text-sm"
+                className="w-full bg-surface-container-lowest hover:bg-surface-container-low text-primary border border-primary font-bold py-3 px-4 rounded-full flex items-center gap-2 justify-center cursor-pointer transition-transform active:scale-95 text-sm"
               >
                 <span className="material-symbols-outlined text-[20px]">style</span>
                 Create Flashcards Deck

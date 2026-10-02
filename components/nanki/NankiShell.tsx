@@ -18,7 +18,7 @@ export default function NankiShell({ children }: NankiShellProps) {
     <div className="min-h-screen bg-surface font-sans text-on-surface flex flex-col antialiased">
       <Header hideAvatar={isProfile} />
 
-      <div className="flex-grow flex flex-col pt-14 pb-24 md:pb-6 md:ml-24 xl:ml-64">
+      <div className="study-content flex-grow flex flex-col pt-20 pb-24 md:pb-6 md:ml-28 xl:ml-64">
         {children}
       </div>
 

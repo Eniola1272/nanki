@@ -1,3 +1,4 @@
+import Brand from '@/components/shared/Brand';
 import { createClient } from '@/lib/db/supabase-server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -25,8 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="max-w-6xl mx-auto h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined fill text-tertiary-container text-[22px]">psychology</span>
-              <span className="font-extrabold text-primary text-base">Nanki</span>
+              <Brand />
             </Link>
             <span className="text-outline-variant">/</span>
             <span className="text-sm font-semibold text-on-surface-variant">Admin</span>

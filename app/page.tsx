@@ -1,8 +1,10 @@
 'use client';
 
+import Brand from '@/components/shared/Brand';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -18,8 +20,7 @@ function LandingNav() {
           onClick={() => router.push('/')}
           className="flex items-center gap-1.5 cursor-pointer"
         >
-          <span className="material-symbols-outlined fill text-tertiary-container text-[28px]">psychology</span>
-          <span className="text-xl font-extrabold text-primary tracking-tight">Nanki</span>
+          <Brand />
         </button>
 
         {/* Desktop links */}
@@ -82,83 +83,22 @@ function LandingNav() {
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
 function HeroSection() {
-  const router = useRouter();
-
   return (
-    <section className="relative overflow-hidden bg-background pt-20 pb-24 px-4 sm:px-6 flex flex-col items-center text-center">
-      {/* Ambient decoration */}
-      <div className="absolute inset-0 pointer-events-none opacity-20 select-none">
-        <div className="absolute top-[8%] left-[4%] w-72 h-72 rounded-full border border-primary/20" />
-        <div className="absolute top-[20%] left-[18%] w-36 h-36 rounded-full border border-tertiary-container/30" />
-        <div className="absolute bottom-[8%] right-[4%] w-96 h-96 rounded-full border border-primary/15" />
-        <div className="absolute top-[50%] right-[14%] w-52 h-52 rounded-full border border-tertiary-container/20" />
-        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <line stroke="#00407e" strokeOpacity="0.1" strokeWidth="1" x1="10%" y1="20%" x2="40%" y2="55%" />
-          <line stroke="#00407e" strokeOpacity="0.1" strokeWidth="1" x1="80%" y1="60%" x2="60%" y2="82%" />
-        </svg>
-      </div>
-
-      <div className="relative z-10 max-w-3xl mx-auto animate-fadeIn">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-surface-container border border-outline-variant/60 text-on-surface-variant text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
-          <span className="w-2 h-2 rounded-full bg-tertiary-container inline-block" />
-          Science-backed &bull; Spaced repetition &bull; Free to start
-        </div>
-
-        {/* Headline */}
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-on-surface leading-tight mb-6">
-          Stop forgetting.<br />
-          <span className="text-primary">Start mastering.</span>
-        </h1>
-
-        {/* Subheadline */}
-        <p className="text-base sm:text-lg text-on-surface-variant max-w-2xl mx-auto leading-relaxed mb-10">
-          Nanki uses <strong className="text-on-surface font-semibold">active recall</strong> and{' '}
-          <strong className="text-on-surface font-semibold">spaced repetition</strong> — the most effective study
-          methods proven by neuroscience — to help you retain more, study less, and actually ace your exams.
-        </p>
-
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button
-            onClick={() => router.push('/auth/signup')}
-            className="bg-primary text-on-primary font-bold text-base px-8 py-3.5 rounded-full hover:bg-primary-container active:scale-95 transition-all shadow-[0px_4px_20px_rgba(0,0,0,0.12)] flex items-center gap-2 group cursor-pointer"
-          >
-            Start learning free
-            <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-          </button>
-          <a
-            href="#how-it-works"
-            className="text-on-surface-variant font-semibold text-sm flex items-center gap-1.5 hover:text-primary transition-colors"
-          >
-            See how it works
-            <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
-          </a>
-        </div>
-
-        {/* Social proof */}
-        <div className="mt-14 pt-8 border-t border-outline-variant/40 flex flex-col items-center gap-3">
-          <div className="flex -space-x-3">
-            {[
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-              'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=120',
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
-              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120',
-            ].map((src, i) => (
-              <img
-                key={i}
-                alt={`Student ${i + 1}`}
-                src={src}
-                className="w-10 h-10 rounded-full border-2 border-surface-bright object-cover"
-              />
-            ))}
-            <div className="w-10 h-10 rounded-full border-2 border-surface-bright bg-surface-container-high flex items-center justify-center font-bold text-xs text-on-surface-variant">
-              +9k
-            </div>
+    <section className="px-4 sm:px-6 pt-6 pb-14 md:pt-10 md:pb-20">
+      <div className="max-w-6xl mx-auto rounded-[2rem] md:rounded-[2.5rem] bg-surface-container-lowest p-4 md:p-6 grid md:grid-cols-2 gap-6 md:gap-12 items-center">
+        <div className="px-3 py-10 sm:px-8 md:py-14 order-2 md:order-1">
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary-fixed px-4 py-2 text-primary text-[11px] font-semibold tracking-wide mb-7"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> A LITTLE EVERY DAY</span>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.12] mb-6">Give your mind<br /><span className="text-primary">room to grow.</span></h1>
+          <p className="text-sm sm:text-base text-on-surface-variant leading-relaxed max-w-md mb-8">Turn what you study into knowledge that stays. Make quizzes, practise with flashcards, and see how far you’ve come.</p>
+          <div className="flex flex-wrap items-center gap-5">
+            <Link href="/auth/signup" className="bg-primary text-on-primary rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-primary-container transition-colors inline-flex items-center gap-3">Start learning free <span className="material-symbols-outlined text-[18px]">arrow_forward</span></Link>
+            <a href="#how-it-works" className="text-sm text-primary font-medium hover:underline">See how it works</a>
           </div>
-          <p className="text-xs text-on-surface-variant font-medium">
-            Joined by <strong className="text-on-surface">10,000+ students</strong> worldwide
-          </p>
+          <p className="mt-8 text-xs text-secondary">Your pace. Your progress. Your next small win.</p>
+        </div>
+        <div className="relative overflow-hidden rounded-3xl h-[260px] md:h-[570px] order-1 md:order-2 bg-surface-dim">
+          <Image src="/images/auth-botanical.png" alt="A sculptural bust made from leaves and white flowers" fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-cover object-[center_35%]" />
+          <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/85 backdrop-blur-md px-5 py-4"><p className="text-sm font-semibold">Small steps. Lasting knowledge.</p><p className="text-xs text-secondary mt-1">A calmer way to learn with Nanki.</p></div>
         </div>
       </div>
     </section>
@@ -329,7 +269,7 @@ function SolutionSection() {
             </div>
 
             {/* Floating streak badge */}
-            <div className="absolute -top-3 -right-3 bg-primary text-on-primary rounded-2xl px-3 py-1.5 text-xs font-bold shadow-[0px_4px_12px_rgba(0,0,0,0.15)] flex items-center gap-1">
+            <div className="absolute -top-3 -right-3 bg-primary text-on-primary rounded-3xl px-3 py-1.5 text-xs font-bold shadow-[0px_4px_12px_rgba(0,0,0,0.15)] flex items-center gap-1">
               <span className="material-symbols-outlined fill text-[14px]">local_fire_department</span>
               7-day streak
             </div>
@@ -409,7 +349,7 @@ function FeaturesSection() {
               key={f.title}
               className="bg-surface-container-low border border-outline-variant/50 rounded-3xl p-7 flex flex-col gap-4 hover:shadow-[0px_4px_20px_rgba(0,0,0,0.06)] transition-shadow"
             >
-              <div className={`w-11 h-11 rounded-2xl ${f.bg} flex items-center justify-center`}>
+              <div className={`w-11 h-11 rounded-3xl ${f.bg} flex items-center justify-center`}>
                 <span className={`material-symbols-outlined fill ${f.color} text-[22px]`}>{f.icon}</span>
               </div>
               <h3 className="text-base font-bold text-on-surface">{f.title}</h3>
@@ -462,7 +402,7 @@ function HowItWorksSection() {
           {steps.map((s, i) => (
             <div key={s.number} className="flex flex-col items-center text-center gap-4">
               <div className="relative">
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-[0px_4px_16px_rgba(0,64,126,0.25)]">
+                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-[0px_4px_16px_rgba(103,64,153,0.25)]">
                   <span className="material-symbols-outlined fill text-on-primary text-[28px]">{s.icon}</span>
                 </div>
                 <span className="absolute -top-1 -right-1 bg-surface-container-lowest border border-outline-variant/50 text-primary text-[10px] font-extrabold w-6 h-6 rounded-full flex items-center justify-center">
@@ -688,7 +628,7 @@ function PricingSection() {
                 key={plan.name}
                 className={`relative rounded-3xl p-7 flex flex-col gap-6 transition-shadow ${
                   plan.highlight
-                    ? 'bg-primary text-on-primary shadow-[0px_8px_40px_rgba(0,64,126,0.3)] scale-[1.02]'
+                    ? 'bg-primary text-on-primary shadow-[0px_8px_40px_rgba(103,64,153,0.3)] scale-[1.02]'
                     : 'bg-surface-container-lowest border border-outline-variant/50 hover:shadow-[0px_4px_20px_rgba(0,0,0,0.07)]'
                 }`}
               >
@@ -830,7 +770,7 @@ function FAQSection() {
           {faqs.map((faq, i) => (
             <div
               key={i}
-              className="border border-outline-variant/50 rounded-2xl overflow-hidden"
+              className="border border-outline-variant/50 rounded-3xl overflow-hidden"
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
@@ -895,8 +835,7 @@ function Footer() {
         {/* Brand */}
         <div className="flex flex-col items-center md:items-start gap-2">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined fill text-tertiary-container text-[24px]">psychology</span>
-            <span className="text-lg font-extrabold text-primary">Nanki</span>
+            <Brand />
           </div>
           <p className="text-xs text-on-surface-variant max-w-[200px] text-center md:text-left">
             Brain-first learning designed for the flow state.
