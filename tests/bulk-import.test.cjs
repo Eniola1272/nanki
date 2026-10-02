@@ -25,3 +25,16 @@ test('the prescribed numbering supports long banks and all six answer positions'
   questions.forEach((q, i) => { assert.equal(q.correctOptionIndex, i % 6); assert.equal(q.options.length, 6); });
   assert.equal(new Set(questions.map(q => q.id)).size, 24);
 });
+
+test('dedicated True/False prompt examples import A–D and A–E with every branch key', () => {
+  const { TRUE_FALSE_IMPORT_PROMPT, TRUE_FALSE_IMPORT_EXAMPLE } = load('lib/quiz/import-prompt.ts');
+  assert.ok(TRUE_FALSE_IMPORT_PROMPT.includes(TRUE_FALSE_IMPORT_EXAMPLE));
+  const questions = parseQuestionsFromText(TRUE_FALSE_IMPORT_EXAMPLE);
+  assert.equal(questions.length, 2);
+  assert.equal(questions[0].type, 'true-false');
+  assert.equal(questions[1].type, 'true-false');
+  assert.equal(questions[0].options.length, 4);
+  assert.equal(questions[1].options.length, 5);
+  assert.deepEqual(Array.from(questions[0].correctTruthValues), [true, false, true, false]);
+  assert.deepEqual(Array.from(questions[1].correctTruthValues), [true, true, false, true, true]);
+});
