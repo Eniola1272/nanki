@@ -245,6 +245,8 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const { data: { subscription } } = createClient().auth.onAuthStateChange((_event, session) => {
+      // Auth forms own their success redirects, including password recovery.
+      if (window.location.pathname.startsWith('/auth/')) return;
       if (!signingOutRef.current && (session?.user.id ?? null) !== userIdRef.current) {
         userIdRef.current = null;
         window.location.reload();

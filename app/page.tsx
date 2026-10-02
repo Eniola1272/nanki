@@ -38,7 +38,7 @@ function LandingNav() {
             Sign in
           </Link>
           <Link
-            href="/auth/signin"
+            href="/auth/signup"
             className="bg-primary text-on-primary text-sm font-bold px-5 py-2.5 rounded-full hover:bg-primary-container transition-all shadow-[0px_4px_20px_rgba(0,0,0,0.1)] flex items-center gap-1.5"
           >
             Get started free
@@ -49,7 +49,7 @@ function LandingNav() {
         {/* Mobile: single CTA + hamburger */}
         <div className="flex md:hidden items-center gap-2">
           <Link
-            href="/auth/signin"
+            href="/auth/signup"
             className="bg-primary text-on-primary text-sm font-bold px-4 py-2 rounded-full"
           >
             Get started
@@ -121,7 +121,7 @@ function HeroSection() {
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
-            onClick={() => router.push('/auth/signin')}
+            onClick={() => router.push('/auth/signup')}
             className="bg-primary text-on-primary font-bold text-base px-8 py-3.5 rounded-full hover:bg-primary-container active:scale-95 transition-all shadow-[0px_4px_20px_rgba(0,0,0,0.12)] flex items-center gap-2 group cursor-pointer"
           >
             Start learning free
@@ -734,7 +734,7 @@ function PricingSection() {
 
                 {/* CTA */}
                 <button
-                  onClick={() => router.push('/auth/signin')}
+                  onClick={() => router.push('/auth/signup')}
                   className={`w-full py-3 rounded-full font-bold text-sm transition-all active:scale-95 cursor-pointer ${
                     plan.highlight
                       ? 'bg-on-primary text-primary hover:bg-primary-fixed'
@@ -875,7 +875,7 @@ function FinalCTASection() {
           Join 10,000+ students already learning smarter. No credit card required. Free to start today.
         </p>
         <button
-          onClick={() => router.push('/auth/signin')}
+          onClick={() => router.push('/auth/signup')}
           className="bg-on-primary text-primary font-extrabold text-base px-10 py-4 rounded-full hover:bg-primary-fixed active:scale-95 transition-all shadow-[0px_4px_24px_rgba(0,0,0,0.2)] flex items-center gap-2 mx-auto cursor-pointer group"
         >
           Start learning free
