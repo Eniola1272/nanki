@@ -43,9 +43,9 @@ export default function ProgressHistory() {
           const previous = history[history.findIndex(a => a.id === attempt.id) + 1];
           const delta = previous ? percentage(attempt) - percentage(previous) : null;
           return <Link key={attempt.id} href={`/quiz/${attempt.quizId}/results?attempt=${attempt.id}`} className="block rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 hover:border-primary">
-            <div className="flex justify-between gap-3"><h3 className="font-bold text-sm">{attempt.quiz.title}</h3><span className="font-bold text-primary whitespace-nowrap">{percentage(attempt)}%</span></div>
-            <p className="text-xs text-secondary mt-1">{new Date(attempt.completedAt).toLocaleString()} · {attempt.correct}/{attempt.total} correct</p>
-            <p className="text-xs mt-2">{delta === null ? 'First recorded attempt' : `${delta > 0 ? '+' : ''}${delta} percentage points vs. previous`} · {attempt.synced ? 'Synced' : 'On this device'} · Review answers →</p>
+            <div className="flex justify-between gap-3"><h3 className="font-bold text-sm">{attempt.quiz.title}</h3><span className="font-bold text-primary whitespace-nowrap">{attempt.netScore ?? attempt.correct}/{attempt.total} pts</span></div>
+            <p className="text-xs text-secondary mt-1">{new Date(attempt.completedAt).toLocaleString()} · {attempt.correct}/{attempt.total} correct · {percentage(attempt)}% accuracy · {attempt.negativeMarking ? 'T/F −0.5 marking' : 'No penalty'}</p>
+            <p className="text-xs mt-2">{delta === null ? 'First recorded attempt' : `${delta > 0 ? '+' : ''}${delta} accuracy points vs. previous`} · {attempt.synced ? 'Synced' : 'On this device'} · Review answers →</p>
           </Link>;
         })}
       </div>

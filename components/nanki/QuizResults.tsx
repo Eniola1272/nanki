@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { branchKey } from '@/lib/quiz/scoring';
 import type { Quiz } from '@/types/nanki';
 
 interface QuizResultsProps {
   quiz: Quiz;
   progressSummary?: ReactNode;
   correctCount: number;
+  netScore?: number;
   wrongCount: number;
   incorrectQuestionIds: string[];
   userAnswers?: Record<string, number | null>;
@@ -18,6 +20,7 @@ export default function QuizResults({
   quiz,
   progressSummary,
   correctCount,
+  netScore,
   wrongCount,
   incorrectQuestionIds,
   userAnswers = {},
@@ -72,7 +75,7 @@ export default function QuizResults({
             </div>
 
             <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-extrabold text-primary mb-2">{correctCount}/{totalQuestions}</h1>
+              <h1 className="text-4xl md:text-5xl font-extrabold text-primary mb-2">{netScore ?? correctCount}/{totalQuestions}</h1>
               <h2 className="text-xl md:text-2xl text-on-surface font-bold">{feedback.title}</h2>
               <p className="font-body-lg text-sm md:text-base text-secondary max-w-sm mx-auto mt-2">{feedback.msg}</p>
             </div>
@@ -114,7 +117,7 @@ export default function QuizResults({
                   className="flex-1 bg-surface-container-lowest text-error border border-error/40 hover:border-error font-bold px-6 py-3 rounded-full flex items-center justify-center gap-1 hover:bg-error-container/20 transition-all cursor-pointer active:scale-95"
                 >
                   <span className="material-symbols-outlined text-[18px]">visibility</span>
-                  <span>Review {wrongCount} Error{wrongCount > 1 ? 's' : ''}</span>
+                  <span>Review missed answers</span>
                 </button>
               ) : (
                 <button
@@ -156,7 +159,7 @@ export default function QuizResults({
                           : 'text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
-                      Mistakes ({wrongCount})
+                      Mistakes ({incorrectQuestionIds.length})
                     </button>
                     <button
                       type="button"
@@ -167,7 +170,7 @@ export default function QuizResults({
                           : 'text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
-                      All ({totalQuestions})
+                      All ({quiz.questions.length})
                     </button>
                   </div>
                 )}
@@ -183,6 +186,21 @@ export default function QuizResults({
             {/* Questions list */}
             <div className="flex flex-col gap-5 mb-8 max-h-[600px] overflow-y-auto pr-1">
               {questionsToReview.map((q) => {
+                if (q.type === 'true-false') return <article key={q.id} className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4">
+                  <h3 className="font-bold">Question {quiz.questions.findIndex(item => item.id === q.id) + 1}: {q.text}</h3>
+                  {q.options.map((option, index) => {
+                    const answer = userAnswers[branchKey(q.id, index)];
+                    const expected = q.correctTruthValues?.[index];
+                    const correct = answer === Number(expected);
+                    return <div key={index} className={`rounded-xl border p-3 text-sm space-y-2 ${correct ? 'border-tertiary/40 bg-tertiary/5' : 'border-error/40 bg-error/5'}`}>
+                      <p className="font-semibold">{String.fromCharCode(65 + index)}. {option}</p>
+                      <p>Your answer: {answer === 1 ? 'True' : answer === 0 ? 'False' : 'Unanswered'} · Correct answer: {expected ? 'True' : 'False'} · {correct ? 'Correct' : answer == null ? 'Not answered' : 'Incorrect'}</p>
+                      {q.branchExplanations?.[index] && <p className="text-secondary">{q.branchExplanations[index]}</p>}
+                    </div>;
+                  })}
+                  {q.explanation && <p className="text-sm text-secondary">{q.explanation}</p>}
+                </article>;
+
                 const userChoiceIdx = userAnswers?.[q.id];
                 const wasAnswered = userChoiceIdx !== undefined && userChoiceIdx !== null;
                 const isMistake = incorrectQuestionIds.includes(q.id);

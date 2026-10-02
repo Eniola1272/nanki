@@ -47,13 +47,13 @@ export async function syncAttempt(userId: string, attempt: Attempt) {
     id: attempt.id, quiz_id: quizId, user_id: userId,
     score: attempt.correct, max_score: attempt.total,
     completed_at: attempt.completedAt,
-    answers: { version: 1, quiz: attempt.quiz, selections: attempt.answers, studyDay: attempt.studyDay } as unknown as Json,
+    answers: { version: 1, quiz: attempt.quiz, selections: attempt.answers, studyDay: attempt.studyDay, negativeMarking: attempt.negativeMarking ?? false, netScore: attempt.netScore ?? attempt.correct, wrong: attempt.wrong, unanswered: attempt.unanswered } as unknown as Json,
   }, { onConflict: 'id', ignoreDuplicates: true });
   if (error) throw error;
 }
 export function fromDatabase(row: QuizAttempt, quizzes: Quiz[]): Attempt | null {
   if (!row.completed_at || !row.max_score || row.score === null) return null;
-  const data = row.answers as { version?: number; quiz?: Quiz; selections?: Record<string, number | null>; studyDay?: string } | null;
+  const data = row.answers as { negativeMarking?: boolean; netScore?: number; wrong?: number; unanswered?: number; version?: number; quiz?: Quiz; selections?: Record<string, number | null>; studyDay?: string } | null;
   const quiz = data?.version === 1 && data.quiz ? data.quiz : quizzes.find(q => q.id === row.quiz_id) ?? { id: row.quiz_id, title: 'Previous quiz', description: '', category: '', questions: [] };
-  return { id: row.id, quizId: quiz.id, quiz, correct: row.score, total: row.max_score, answers: data?.selections ?? {}, completedAt: row.completed_at, studyDay: data?.studyDay ?? studyDay(new Date(row.completed_at)), synced: true };
+  return { negativeMarking: data?.negativeMarking ?? false, netScore: data?.netScore ?? row.score, wrong: data?.wrong, unanswered: data?.unanswered, id: row.id, quizId: quiz.id, quiz, correct: row.score, total: row.max_score, answers: data?.selections ?? {}, completedAt: row.completed_at, studyDay: data?.studyDay ?? studyDay(new Date(row.completed_at)), synced: true };
 }

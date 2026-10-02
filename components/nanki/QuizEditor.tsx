@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useNankiStore } from '@/lib/nanki-store';
 import { editorDraftKey } from '@/lib/editor/drafts';
 import { useEditorDraft } from '@/lib/editor/use-editor-draft';
+import { validQuestion } from '@/lib/quiz/scoring';
 import { parseQuestionsFromText } from '@/lib/quiz/bulk-import';
 import BulkImportPrompt from './BulkImportPrompt';
 import VisibilityField from './VisibilityField';
@@ -59,7 +60,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
     setQuestions(p => p.map(q => q.id === qId ? { ...q, options: q.options.map((o, i) => i === optIdx ? val : o) } : q));
 
   const addOption = (qId: string) =>
-    setQuestions(p => p.map(q => q.id === qId && q.options.length < 6 ? { ...q, options: [...q.options, `Option ${q.options.length + 1}`] } : q));
+    setQuestions(p => p.map(q => q.id === qId && q.options.length < 6 ? { ...q, options: [...q.options, `Option ${q.options.length + 1}`], correctTruthValues: q.type === 'true-false' ? [...(q.correctTruthValues ?? []), false] : undefined } : q));
 
   const removeOption = (qId: string, optIdx: number) =>
     setQuestions(p => p.map(q => {
@@ -68,7 +69,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
       let ci = q.correctOptionIndex;
       if (ci === optIdx) ci = 0;
       else if (ci > optIdx) ci -= 1;
-      return { ...q, options: opts, correctOptionIndex: ci };
+      return { ...q, options: opts, correctOptionIndex: ci, correctTruthValues: q.correctTruthValues?.filter((_, i) => i !== optIdx), branchExplanations: q.branchExplanations?.filter((_, i) => i !== optIdx) };
     }));
 
   const handleSave = async () => {
@@ -94,6 +95,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
 
   const handleApplyBulk = (replace: boolean) => {
     const parsed = parseQuestionsFromText(bulkText);
+    if (parsed.some(q => !validQuestion(q))) { setSaveError('Every True/False statement needs a T/F answer in the Answers line. Fix the source before importing.'); return; }
     if (parsed.length === 0) {
       alert('Could not parse any questions. Please check the format (need question followed by at least 2 options).');
       return;
@@ -191,23 +193,29 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
                   <span className="material-symbols-outlined text-[18px]">timer</span>
                   <select value={q.timer} onChange={e => updateField(q.id, 'timer', e.target.value)}
                     className="bg-transparent border-0 font-semibold p-0 pr-4 text-xs text-on-surface focus:ring-0 focus:outline-none cursor-pointer">
-                    {['10s', '15s', '20s', '30s', '45s', '60s'].map(t => <option key={t} value={t}>{t}</option>)}
+                    {['10s', '15s', '20s', '30s', '45s', '60s', '120s', '180s'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
 
+              <label className="flex items-center gap-3 text-xs font-bold">Question type
+                <select aria-label="Question type" value={q.type ?? 'multiple-choice'} onChange={e => setQuestions(items => items.map(item => item.id === q.id ? { ...item, type: e.target.value as Question['type'], correctTruthValues: e.target.value === 'true-false' ? item.options.map((_, index) => item.correctTruthValues?.[index] ?? false) : undefined } : item))} className="rounded-lg border border-outline-variant bg-surface-container-low p-2">
+                  <option value="multiple-choice">Single correct answer</option><option value="true-false">True/False per statement</option>
+                </select>
+              </label>
+              {q.type === 'true-false' && <p className="text-xs text-secondary">Set the correct True/False answer for every statement below.</p>}
               <hr className="border-outline-variant/60" />
 
               <div className="flex flex-col gap-3">
                 {q.options.map((option, optIdx) => {
-                  const isCorrect = q.correctOptionIndex === optIdx;
+                  const isCorrect = q.type !== 'true-false' && q.correctOptionIndex === optIdx;
                   return (
                     <div key={optIdx} className="flex items-center gap-3 group/opt">
-                      <button onClick={() => updateField(q.id, 'correctOptionIndex', optIdx)}
+                      {q.type === 'true-false' ? <select aria-label={`Correct answer for statement ${String.fromCharCode(65 + optIdx)}`} value={String(q.correctTruthValues?.[optIdx] ?? false)} onChange={e => updateField(q.id, 'correctTruthValues', q.options.map((_, i) => i === optIdx ? e.target.value === 'true' : q.correctTruthValues?.[i] ?? false))} className="text-xs rounded-lg border border-outline-variant p-2 bg-surface-container-low"><option value="true">True</option><option value="false">False</option></select> : <button onClick={() => updateField(q.id, 'correctOptionIndex', optIdx)}
                         title={isCorrect ? 'Correct Option (click to change)' : 'Click to mark as correct answer'}
                         className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all cursor-pointer ${isCorrect ? 'border-primary bg-primary text-on-primary ring-2 ring-primary/30' : 'border-outline-variant hover:border-primary bg-transparent text-transparent'}`}>
                         <span className="material-symbols-outlined text-[16px] font-bold select-none">{isCorrect ? 'check' : ''}</span>
-                      </button>
+                      </button>}
                       <input type="text" value={option} onChange={e => updateOption(q.id, optIdx, e.target.value)} placeholder={`Option ${optIdx + 1}`}
                         className={`flex-1 rounded-xl px-3 py-1.5 text-sm transition-all focus:outline-none border ${isCorrect ? 'bg-primary/5 border-primary font-medium focus:border-primary focus:ring-1 focus:ring-primary' : 'bg-surface-bright border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary-fixed'}`} />
                       {q.options.length > 2 && (
@@ -249,7 +257,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
                   Bulk Import Questions
                 </h2>
                 <p className="text-xs text-on-surface-variant">
-                  Paste multiple-choice questions from past papers or notes. Questions and options are auto-detected.
+                  Paste multiple-choice or branch-by-branch True/False questions. Questions and options are auto-detected.
                 </p>
               </div>
               <button onClick={() => setShowBulkModal(false)} className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container-low">
@@ -274,6 +282,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
               </button>
             </div>
 
+            {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
             <div className="flex-1 shrink-0 flex flex-col py-2">
               <label htmlFor="bulk-questions" className="text-xs font-semibold text-secondary mb-1 flex justify-between">
                 <span>Paste formatted questions or question-bank text:</span>
@@ -284,7 +293,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
               <textarea
                 id="bulk-questions"
                 value={bulkText}
-                onChange={e => setBulkText(e.target.value)}
+                onChange={e => { setBulkText(e.target.value); setSaveError(''); }}
                 placeholder={`Example Format:
 
 1. Triad of watery, blood stained vaginal discharge, abdominal pain and pelvic mass is?

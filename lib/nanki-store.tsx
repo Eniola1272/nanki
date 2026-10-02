@@ -9,6 +9,7 @@ import { INITIAL_PROFILE, INITIAL_QUIZZES, INITIAL_DECKS } from '@/lib/data/init
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/db/supabase-browser';
 import { showToast } from '@/lib/utils/toast';
+import { scoreQuiz, validQuestion } from '@/lib/quiz/scoring';
 import { progressStats, studyDay, percentage, type Attempt } from '@/lib/progress/stats';
 import { readAttempts, writeAttempts, mergeAttempts, syncAttempt, fromDatabase, databaseQuizId } from '@/lib/progress/storage';
 import { type FlashcardSession, flashcardKey, readFlashcards, mergeFlashcards, syncFlashcard, flashcardFromDatabase } from '@/lib/progress/flashcards';
@@ -36,7 +37,7 @@ interface NankiStore {
   handleSaveDeck: (deck: Deck) => Promise<boolean>;
   handleDeleteQuiz: (id: string) => void;
   handleDeleteDeck: (id: string) => void;
-  handleCompleteQuizPlay: (quizId: string, answers: Record<string, number | null>, attemptId: string) => string;
+  handleCompleteQuizPlay: (quizId: string, answers: Record<string, number | null>, attemptId: string, negativeMarking?: boolean) => string;
   resetAllState: () => Promise<void>;
   signingOut: boolean;
   likesAvailable: boolean;
@@ -262,6 +263,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     if (!owner) { showToast.error('Sign in to save a quiz.'); return false; }
     const existing = quizzes.find(q => q.id === saved.id);
     if (existing?.ownerId && existing.ownerId !== owner) { showToast.error('Only the author can edit this quiz.'); return false; }
+    if (!saved.questions.every(validQuestion)) { showToast.error('Set True or False for every statement before saving.'); return false; }
     if (saved.published && !saved.questions.length) { showToast.error('Add at least one question before publishing.'); return false; }
     const id = existing?.ownerId === owner ? saved.id : crypto.randomUUID();
     try {
@@ -360,13 +362,13 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   }, [decks]);
 
   // Save locally before navigating; the stable attempt ID makes retries idempotent.
-  const handleCompleteQuizPlay = useCallback((quizId: string, answers: Record<string, number | null>, attemptId: string) => {
+  const handleCompleteQuizPlay = useCallback((quizId: string, answers: Record<string, number | null>, attemptId: string, negativeMarking = false) => {
     if (attemptsRef.current.some(a => a.id === attemptId)) return attemptId;
     const quiz = quizzes.find(q => q.id === quizId);
     if (!quiz || !quiz.questions.length) throw new Error('Quiz unavailable');
-    const correct = quiz.questions.filter(q => answers[q.id] === q.correctOptionIndex).length;
+    const score = scoreQuiz(quiz, answers, negativeMarking);
     const attempt: Attempt = {
-      id: attemptId, quizId, quiz, correct, total: quiz.questions.length, answers,
+      id: attemptId, quizId, quiz, correct: score.correct, total: score.total, netScore: score.netScore, wrong: score.wrong, unanswered: score.unanswered, negativeMarking, answers,
       completedAt: new Date().toISOString(), studyDay: studyDay(), synced: false,
     };
     commitAttempts(mergeAttempts(attemptsRef.current, [attempt]), userIdRef.current ?? 'guest');

@@ -12,6 +12,10 @@ export interface Question {
   timer: string; // e.g. "20s"
   options: string[];
   correctOptionIndex: number;
+  type?: 'multiple-choice' | 'true-false';
+  correctTruthValues?: boolean[];
+  branchExplanations?: string[];
+  explanation?: string;
 }
 
 export interface Quiz extends CommunityContent {

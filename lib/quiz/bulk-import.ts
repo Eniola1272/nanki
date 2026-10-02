@@ -1,6 +1,6 @@
 import type { Question } from '@/types/nanki';
 
-export function parseQuestionsFromText(text: string): Question[] {
+function parseMultipleChoiceText(text: string): Question[] {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const parsedQuestions: Question[] = [];
 
@@ -102,3 +102,36 @@ export function parseQuestionsFromText(text: string): Question[] {
   return parsedQuestions;
 }
 
+
+// Explicit T/F blocks are parsed separately so missing branch keys can never
+// silently turn into single-choice questions with A selected as the answer.
+export function parseQuestionsFromText(text: string): Question[] {
+  if (!/^Type:\s*True\s*[/\-]\s*False|^Answers:\s*[A-F]\s*=/im.test(text)) return parseMultipleChoiceText(text);
+  const blocks = text.trim().split(/(?=^(?:(?:Question|Q)\s*\d+[:.)-]|\d+[.)])\s*)/im).filter(block => block.trim());
+  return blocks.flatMap(block => {
+    if (!/^Type:\s*True\s*[/\-]\s*False|^Answers:\s*[A-F]\s*=/im.test(block)) return parseMultipleChoiceText(block);
+    const lines = block.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const stem = lines[0].replace(/^(?:(?:Question|Q)\s*\d+[:.)-]|\d+[.)])\s*/i, '');
+    const options: string[] = [];
+    let valid = true;
+    for (const line of lines.slice(1)) {
+      const match = line.match(/^([A-F])[.)]\s+(.+)$/);
+      if (match) {
+        if (match[1].charCodeAt(0) - 65 !== options.length) valid = false;
+        options.push(match[2]);
+      }
+    }
+    const answerLines = lines.filter(line => /^Answers:/i.test(line));
+    const keys = new Map<string, boolean>();
+    if (answerLines.length !== 1) valid = false;
+    for (const token of (answerLines[0] ?? '').replace(/^Answers:\s*/i, '').split(',')) {
+      const match = token.trim().match(/^([A-F])\s*=\s*(T|F|TRUE|FALSE)$/i);
+      if (!match || keys.has(match[1].toUpperCase())) { valid = false; continue; }
+      keys.set(match[1].toUpperCase(), match[2].toUpperCase().startsWith('T'));
+    }
+    if (keys.size !== options.length || options.length < 2 || options.length > 6) valid = false;
+    const values = options.map((_, i) => keys.get(String.fromCharCode(65 + i)));
+    if (values.some(value => value === undefined)) valid = false;
+    return [{ id: crypto.randomUUID(), text: stem, type: 'true-false' as const, timer: '120s', options, correctOptionIndex: 0, correctTruthValues: valid ? values as boolean[] : [] }];
+  });
+}

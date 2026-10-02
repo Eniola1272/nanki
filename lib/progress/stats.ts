@@ -7,6 +7,10 @@ export interface Attempt {
   quiz: Quiz;
   correct: number;
   total: number;
+  negativeMarking?: boolean;
+  netScore?: number;
+  wrong?: number;
+  unanswered?: number;
   answers: Record<string, number | null>;
   completedAt: string;
   studyDay: string;

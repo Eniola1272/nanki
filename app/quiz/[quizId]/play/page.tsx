@@ -16,9 +16,10 @@ export default function PlayQuizPage({ params }: { params: Promise<{ quizId: str
     wrong: number,
     incorrectIds: string[],
     userAnswers: Record<string, number | null>,
-    attemptId: string
+    attemptId: string,
+    negativeMarking: boolean
   ) => {
-    const id = handleCompleteQuizPlay(quizId, userAnswers, attemptId);
+    const id = handleCompleteQuizPlay(quizId, userAnswers, attemptId, negativeMarking);
     router.push(`/quiz/${quizId}/results?attempt=${id}`);
   };
 

@@ -130,3 +130,34 @@ across devices. Local-storage failures are shown rather than reported as saves.
 PostgreSQL tests in `tests/community-db.cjs` also verify privileged profile fields,
 flashcard history isolation, and duplicate session protection. This migration
 has been tested locally; it is not automatically applied to the hosted database.
+
+## Branch-by-branch True/False quizzes
+
+The starter library includes **Paediatrics True/False — Batch 1**, converted from
+`Paediatrics_TF_Batch_1_Pages_1-10.docx`: 40 stems and 195 statements. Wording,
+answer keys, qualifications, and supporting reasons come from that supplied
+revision document, not an independently verified clinical answer key. Reasons
+and memory notes appear after completion. Each stem allows 120 seconds.
+
+Questions can use `type: 'true-false'` with one `correctTruthValues` boolean per
+option. Existing single-answer questions remain compatible. The editor and the
+copyable AI prompt support both types, including mixed quizzes. Import example:
+
+```text
+Question 1: Judge each statement independently:
+Type: True/False
+A. Water has the formula H2O.
+B. Mars is a star.
+Answers: A=T, B=F
+```
+
+Before a quiz containing True/False statements starts, learners choose whether to
+use negative marking. Each correct branch earns 1 point; each incorrect branch
+subtracts 0.5 if enabled, otherwise 0. Unanswered branches always score 0.
+Multiple-choice questions are not penalized. Scores may be negative. The choice
+is fixed during a run, retained in its device draft and saved attempt, and can
+be changed on a fresh retake.
+
+History distinguishes net points from unpenalized answer accuracy. Branch answers
+and scoring metadata are stored in the existing `answers` JSON; `score` retains
+the raw correct count, so fractional net scores need no database migration.
