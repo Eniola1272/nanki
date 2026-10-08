@@ -61,8 +61,19 @@ export default function AuthPage({ mode }: { mode: Mode }) {
             method: 'email',
           }),
         }).catch(() => {});
-        if (data.session) window.location.replace(next);
-        else { setNotice('Check your inbox for a confirmation link to finish creating your account. If you already have an account, sign in instead.'); setPassword(''); }
+        if (data.session) {
+          if (search.get('trial') === 'true') {
+            try {
+              await fetch('/api/billing/activate-trial', { method: 'POST' });
+            } catch {
+              // Non-blocking; user can also activate from profile
+            }
+          }
+          window.location.replace(next);
+        } else {
+          setNotice('Check your inbox for a confirmation link to finish creating your account. If you already have an account, sign in instead.');
+          setPassword('');
+        }
       } else if (mode === 'forgot-password') {
         const { error } = await db.auth.resetPasswordForEmail(email.trim(), { redirectTo: callback('/auth/update-password') });
         if (error) throw error;

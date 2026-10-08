@@ -14,6 +14,9 @@ import { progressStats, studyDay, percentage, type Attempt } from '@/lib/progres
 import { readAttempts, writeAttempts, mergeAttempts, syncAttempt, fromDatabase, databaseQuizId } from '@/lib/progress/storage';
 import { type FlashcardSession, flashcardKey, readFlashcards, mergeFlashcards, syncFlashcard, flashcardFromDatabase } from '@/lib/progress/flashcards';
 import type { Json, DbQuiz, Database } from '@/types/database';
+import type { PlanTier, SubscriptionStatus } from '@/types/billing';
+import { canCreateQuiz, canCreateDeck, getEffectivePlan, isTrialActive, getTrialDaysRemaining, PLAN_LIMITS } from '@/lib/billing/plans';
+import UpgradeModal from '@/components/billing/UpgradeModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +45,14 @@ interface NankiStore {
   signingOut: boolean;
   likesAvailable: boolean;
   toggleLike: (kind: 'quiz' | 'deck', id: string) => Promise<void>;
+  effectivePlan: PlanTier;
+  isTrial: boolean;
+  trialDaysRemaining: number;
+  upgradeModalOpen: boolean;
+  upgradeReason: string | null;
+  openUpgradeModal: (reason?: string | null) => void;
+  closeUpgradeModal: () => void;
+  activateTrial: () => Promise<boolean>;
 }
 
 // ── DB ↔ Local converters ─────────────────────────────────────────────────────
@@ -96,6 +107,62 @@ export function NankiProvider({ children }: { children: ReactNode }) {
   const [showCreatorSelector, setShowCreatorSelector] = useState(false);
 
   const [userId, setUserId] = useState('guest');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<string | null>(null);
+
+  const openUpgradeModal = useCallback((reason?: string | null) => {
+    setUpgradeReason(reason ?? null);
+    setUpgradeModalOpen(true);
+  }, []);
+
+  const closeUpgradeModal = useCallback(() => {
+    setUpgradeModalOpen(false);
+    setUpgradeReason(null);
+  }, []);
+
+  const effectivePlan = getEffectivePlan({
+    plan: profile.plan,
+    subscription_status: profile.subscriptionStatus,
+    trial_ends_at: profile.trialEndsAt,
+  });
+
+  const isTrial = isTrialActive({
+    subscription_status: profile.subscriptionStatus,
+    trial_ends_at: profile.trialEndsAt,
+  });
+
+  const trialDaysRemaining = getTrialDaysRemaining({
+    subscription_status: profile.subscriptionStatus,
+    trial_ends_at: profile.trialEndsAt,
+  });
+
+  const activateTrial = useCallback(async (): Promise<boolean> => {
+    if (!userIdRef.current || userIdRef.current === 'guest') {
+      router.push('/auth/signup');
+      return false;
+    }
+    try {
+      const res = await fetch('/api/billing/activate-trial', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast.error(data.error || 'Failed to activate trial.');
+        return false;
+      }
+      setProfile(prev => ({
+        ...prev,
+        plan: 'PRO',
+        subscriptionStatus: 'TRIALING',
+        trialEndsAt: data.trial_ends_at,
+        hasUsedTrial: true,
+      }));
+      showToast.success('7-Day Pro trial activated! Enjoy unlimited quizzes and decks.');
+      return true;
+    } catch {
+      showToast.error('Could not activate trial. Please try again.');
+      return false;
+    }
+  }, [router]);
+
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const attemptsRef = useRef<Attempt[]>([]);
   const syncing = useRef(false);
@@ -182,9 +249,24 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       commitAttempts(readAttempts(owner), owner);
       commitFlashcards(readFlashcards(owner), owner);
       if (user) {
-        const { data: profileRow } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single();
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('name, avatar_url, plan, subscription_status, trial_ends_at, has_used_trial, subscription_ends_at, billing_cycle, stripe_customer_id')
+          .eq('id', user.id)
+          .single();
         if (cancelled) return;
-        setProfile({ ...INITIAL_PROFILE, name: profileRow?.name ?? user.user_metadata?.full_name ?? 'Learner', avatar: profileRow?.avatar_url ?? user.user_metadata?.avatar_url ?? INITIAL_PROFILE.avatar });
+        setProfile({
+          ...INITIAL_PROFILE,
+          name: profileRow?.name ?? user.user_metadata?.full_name ?? 'Learner',
+          avatar: profileRow?.avatar_url ?? user.user_metadata?.avatar_url ?? INITIAL_PROFILE.avatar,
+          plan: profileRow?.plan ?? 'FREE',
+          subscriptionStatus: profileRow?.subscription_status ?? 'INACTIVE',
+          trialEndsAt: profileRow?.trial_ends_at ?? null,
+          hasUsedTrial: profileRow?.has_used_trial ?? false,
+          subscriptionEndsAt: profileRow?.subscription_ends_at ?? null,
+          billingCycle: profileRow?.billing_cycle ?? null,
+          stripeCustomerId: profileRow?.stripe_customer_id ?? null,
+        });
       }
       const seedIds = user ? await Promise.all(INITIAL_QUIZZES.map(q => databaseQuizId(user.id, q.id))) : [];
       const allQuizzes: Quiz[] = [];
@@ -265,6 +347,22 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     if (!owner) { showToast.error('Sign in to save a quiz.'); return false; }
     const existing = quizzes.find(q => q.id === saved.id);
     if (existing?.ownerId && existing.ownerId !== owner) { showToast.error('Only the author can edit this quiz.'); return false; }
+
+    const isNew = !existing || existing.ownerId !== owner;
+    if (isNew) {
+      const ownedQuizzesCount = quizzes.filter(q => q.ownerId === owner).length;
+      const billingProfile = {
+        plan: profile.plan,
+        subscription_status: profile.subscriptionStatus,
+        trial_ends_at: profile.trialEndsAt,
+      };
+      if (!canCreateQuiz(billingProfile, ownedQuizzesCount)) {
+        openUpgradeModal('quiz_limit');
+        showToast.error(`You have reached the free limit of ${PLAN_LIMITS.FREE.maxQuizzes} quizzes. Upgrade to Pro for unlimited quizzes.`);
+        return false;
+      }
+    }
+
     if (!saved.questions.every(validQuestion)) { showToast.error('Set True or False for every statement before saving.'); return false; }
     if (saved.published && !saved.questions.length) { showToast.error('Add at least one question before publishing.'); return false; }
     const id = existing?.ownerId === owner ? saved.id : crypto.randomUUID();
@@ -281,13 +379,29 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       showToast.success(saved.published ? 'Public quiz saved.' : 'Private quiz saved.');
       return true;
     } catch { showToast.error('Could not save quiz. Your changes are still in the editor.'); return false; }
-  }, [quizzes, refreshLikes]);
+  }, [quizzes, profile, openUpgradeModal, refreshLikes]);
 
   const handleSaveDeck = useCallback(async (saved: Deck, mistakeImport = false) => {
     const owner = userIdRef.current;
     if (!owner) { showToast.error('Sign in to save a deck.'); return false; }
     const existing = decks.find(d => d.id === saved.id);
     if (existing?.ownerId && existing.ownerId !== owner) { showToast.error('Only the author can edit this deck.'); return false; }
+
+    const isNew = !existing || existing.ownerId !== owner;
+    if (isNew && !mistakeImport) {
+      const ownedDecksCount = decks.filter(d => d.ownerId === owner).length;
+      const billingProfile = {
+        plan: profile.plan,
+        subscription_status: profile.subscriptionStatus,
+        trial_ends_at: profile.trialEndsAt,
+      };
+      if (!canCreateDeck(billingProfile, ownedDecksCount)) {
+        openUpgradeModal('deck_limit');
+        showToast.error(`You have reached the free limit of ${PLAN_LIMITS.FREE.maxDecks} decks. Upgrade to Pro for unlimited decks.`);
+        return false;
+      }
+    }
+
     if (saved.published && !saved.cards.length) { showToast.error('Add at least one card before publishing.'); return false; }
     const id = existing?.ownerId === owner ? saved.id : crypto.randomUUID();
     try {
@@ -314,7 +428,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       showToast.success(saved.published ? 'Public deck saved.' : 'Private deck saved.');
       return true;
     } catch { showToast.error('Could not save deck. Your changes are still in the editor.'); return false; }
-  }, [decks, refreshLikes]);
+  }, [decks, profile, openUpgradeModal, refreshLikes]);
 
   const toggleLike = useCallback(async (kind: 'quiz' | 'deck', id: string) => {
     const owner = userIdRef.current;
@@ -435,8 +549,25 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       handleCompleteQuizPlay,
       flashcardSessions, handleCompleteFlashcards,
       resetAllState, signingOut, likesAvailable, toggleLike,
+      effectivePlan,
+      isTrial,
+      trialDaysRemaining,
+      upgradeModalOpen,
+      upgradeReason,
+      openUpgradeModal,
+      closeUpgradeModal,
+      activateTrial,
     }}>
       {children}
+
+      {/* ── Upgrade Modal ─────────────────────────────────────────────────── */}
+      <UpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={closeUpgradeModal}
+        reason={upgradeReason}
+        hasUsedTrial={profile.hasUsedTrial}
+        onActivateTrial={activateTrial}
+      />
 
       {/* ── Create selector modal ─────────────────────────────────────────── */}
       {showCreatorSelector && (

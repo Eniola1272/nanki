@@ -637,6 +637,16 @@ function PricingSection() {
           {PLANS.map((plan) => {
             const price = billing === 'annual' ? plan.annualPrice : plan.monthlyPrice;
 
+            const handlePlanCta = () => {
+              if (plan.name === 'Free') {
+                router.push('/auth/signup');
+              } else if (plan.name === 'Student Pro') {
+                router.push(`/auth/signup?plan=PRO&trial=true&cycle=${billing}`);
+              } else {
+                router.push(`/auth/signup?plan=SCHOLAR&cycle=${billing}`);
+              }
+            };
+
             return (
               <div
                 key={plan.name}
@@ -688,7 +698,7 @@ function PricingSection() {
 
                 {/* CTA */}
                 <button
-                  onClick={() => router.push('/auth/signup')}
+                  onClick={handlePlanCta}
                   className={`w-full py-3 rounded-full font-bold text-sm transition-all active:scale-95 cursor-pointer ${
                     plan.highlight
                       ? 'bg-on-primary text-primary hover:bg-primary-fixed'

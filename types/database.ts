@@ -38,6 +38,14 @@ export interface Database {
           is_premium: boolean
           is_admin: boolean
           stripe_customer_id: string | null
+          plan: 'FREE' | 'PRO' | 'SCHOLAR'
+          subscription_status: 'INACTIVE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+          trial_ends_at: string | null
+          has_used_trial: boolean
+          subscription_ends_at: string | null
+          stripe_subscription_id: string | null
+          stripe_price_id: string | null
+          billing_cycle: 'monthly' | 'annual' | null
           created_at: string
           updated_at: string
         }
@@ -49,6 +57,14 @@ export interface Database {
           is_premium?: boolean
           is_admin?: boolean
           stripe_customer_id?: string | null
+          plan?: 'FREE' | 'PRO' | 'SCHOLAR'
+          subscription_status?: 'INACTIVE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+          trial_ends_at?: string | null
+          has_used_trial?: boolean
+          subscription_ends_at?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+          billing_cycle?: 'monthly' | 'annual' | null
           created_at?: string
           updated_at?: string
         }
@@ -60,6 +76,14 @@ export interface Database {
           is_premium?: boolean
           is_admin?: boolean
           stripe_customer_id?: string | null
+          plan?: 'FREE' | 'PRO' | 'SCHOLAR'
+          subscription_status?: 'INACTIVE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+          trial_ends_at?: string | null
+          has_used_trial?: boolean
+          subscription_ends_at?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+          billing_cycle?: 'monthly' | 'annual' | null
           updated_at?: string
         }
         Relationships: []
@@ -289,6 +313,10 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
+      activate_user_trial: {
+        Args: { trial_days?: number }
+        Returns: Json
+      }
       save_mistake_flashcards: { Args: { p_deck_id: string; p_title: string; p_category: string; p_cards: Json }; Returns: Json };
       content_like_stats: {
         Args: Record<string, never>

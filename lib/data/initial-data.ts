@@ -105,4 +105,11 @@ export const INITIAL_PROFILE: UserProfile = {
   masteryPercentage: 0,
   personalBestStreak: 0,
   badges: [],
+  plan: 'FREE',
+  subscriptionStatus: 'INACTIVE',
+  trialEndsAt: null,
+  hasUsedTrial: false,
+  subscriptionEndsAt: null,
+  billingCycle: null,
+  stripeCustomerId: null,
 };

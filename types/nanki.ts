@@ -1,3 +1,5 @@
+import type { PlanTier, SubscriptionStatus, BillingCycle } from './billing';
+
 export interface CommunityContent {
   ownerId?: string | null;
   published?: boolean;
@@ -56,6 +58,13 @@ export interface UserProfile {
   masteryPercentage: number;
   personalBestStreak: number;
   badges: Badge[];
+  plan?: PlanTier;
+  subscriptionStatus?: SubscriptionStatus;
+  trialEndsAt?: string | null;
+  hasUsedTrial?: boolean;
+  subscriptionEndsAt?: string | null;
+  billingCycle?: BillingCycle | null;
+  stripeCustomerId?: string | null;
 }
 
 export interface Badge {

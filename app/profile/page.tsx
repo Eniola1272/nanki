@@ -4,13 +4,63 @@ import Link from 'next/link';
 import { useState } from 'react';
 import ProgressHistory from '@/components/nanki/ProgressHistory';
 import NankiShell from '@/components/nanki/NankiShell';
+import PlanBadge from '@/components/billing/PlanBadge';
 import { useNankiStore } from '@/lib/nanki-store';
+import { PLAN_LIMITS } from '@/lib/billing/plans';
+import { showToast } from '@/lib/utils/toast';
 
 export default function ProfilePage() {
-  const { profile, quizzes: allQuizzes, decks: allDecks, userId, resetAllState, signingOut, handleDeleteQuiz, handleDeleteDeck } = useNankiStore();
+  const {
+    profile,
+    quizzes: allQuizzes,
+    decks: allDecks,
+    userId,
+    resetAllState,
+    signingOut,
+    handleDeleteQuiz,
+    handleDeleteDeck,
+    effectivePlan,
+    isTrial,
+    trialDaysRemaining,
+    openUpgradeModal,
+    activateTrial,
+  } = useNankiStore();
   const quizzes = allQuizzes.filter(q => q.ownerId === userId);
   const decks = allDecks.filter(d => d.ownerId === userId);
   const [profileTab, setProfileTab] = useState<'quizzes' | 'decks'>('quizzes');
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await fetch('/api/billing/create-portal-session', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        showToast.error(data.error || 'Failed to open billing portal');
+      }
+    } catch {
+      showToast.error('Network error opening billing portal');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const handleStartTrial = async () => {
+    setTrialLoading(true);
+    try {
+      await activateTrial();
+    } finally {
+      setTrialLoading(false);
+    }
+  };
+
+  const quizLimit = PLAN_LIMITS[effectivePlan].maxQuizzes;
+  const deckLimit = PLAN_LIMITS[effectivePlan].maxDecks;
+  const quizPct = quizLimit === Infinity ? 100 : Math.min(100, (quizzes.length / quizLimit) * 100);
+  const deckPct = deckLimit === Infinity ? 100 : Math.min(100, (decks.length / deckLimit) * 100);
 
   return (
     <NankiShell>
@@ -20,15 +70,106 @@ export default function ProfilePage() {
         <section className="flex flex-col items-center text-center space-y-4 py-8 px-4 rounded-3xl bg-surface-container-lowest border border-outline-variant">
           <div className="relative">
             <img alt="Profile Large" className="w-24 h-24 rounded-full object-cover border-4 border-surface-container-lowest shadow-md select-none" src={profile.avatar} />
-
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-on-surface">{profile.name}</h1>
             <p className="text-xs md:text-sm text-on-surface-variant max-w-sm mt-1">{profile.bio}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <PlanBadge
+              plan={profile.plan}
+              status={profile.subscriptionStatus}
+              trialEndsAt={profile.trialEndsAt}
+              onUpgradeClick={() => openUpgradeModal()}
+            />
             <span className="bg-surface-container-highest text-on-surface-variant font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">Level {profile.level}</span>
             <span className="bg-tertiary/10 text-tertiary font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">{profile.totalQuizzesTaken === 0 ? 'New learner' : 'Active learner'}</span>
+          </div>
+        </section>
+
+        {/* Subscription & Plan Limits card */}
+        <section className="p-6 rounded-3xl bg-surface-container-lowest border border-outline-variant shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-outline-variant/50">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary">Membership & Plan</span>
+              <h2 className="text-lg font-extrabold text-on-surface mt-0.5">
+                {effectivePlan === 'SCHOLAR'
+                  ? 'Scholar Workspace Plan'
+                  : effectivePlan === 'PRO'
+                  ? isTrial
+                    ? `Student Pro (7-Day Trial — ${trialDaysRemaining}d remaining)`
+                    : 'Student Pro Plan'
+                  : 'Free Starter Plan'}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {!profile.hasUsedTrial && effectivePlan === 'FREE' && (
+                <button
+                  onClick={handleStartTrial}
+                  disabled={trialLoading}
+                  className="bg-primary text-on-primary font-bold text-xs px-4 py-2 rounded-full hover:bg-primary-container transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {trialLoading ? 'Activating…' : 'Start 7-Day Pro Trial'}
+                </button>
+              )}
+              {effectivePlan === 'FREE' || isTrial ? (
+                <button
+                  onClick={() => openUpgradeModal()}
+                  className="bg-primary-fixed text-primary font-bold text-xs px-4 py-2 rounded-full hover:bg-primary-container hover:text-on-primary transition-all cursor-pointer"
+                >
+                  Upgrade Plan
+                </button>
+              ) : profile.stripeCustomerId ? (
+                <button
+                  onClick={handleManageBilling}
+                  disabled={portalLoading}
+                  className="border border-outline-variant text-on-surface font-bold text-xs px-4 py-2 rounded-full hover:bg-surface-container-high transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {portalLoading ? 'Opening portal…' : 'Manage Subscription'}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Usage Quotas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/40 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">quiz</span> Quizzes Created
+                </span>
+                <span className="font-extrabold text-on-surface-variant">
+                  {quizLimit === Infinity ? `${quizzes.length} (Unlimited)` : `${quizzes.length} / ${quizLimit}`}
+                </span>
+              </div>
+              <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    quizLimit !== Infinity && quizzes.length >= quizLimit ? 'bg-error' : 'bg-primary'
+                  }`}
+                  style={{ width: `${quizPct}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/40 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-secondary">style</span> Flashcard Decks
+                </span>
+                <span className="font-extrabold text-on-surface-variant">
+                  {deckLimit === Infinity ? `${decks.length} (Unlimited)` : `${decks.length} / ${deckLimit}`}
+                </span>
+              </div>
+              <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    deckLimit !== Infinity && decks.length >= deckLimit ? 'bg-error' : 'bg-secondary'
+                  }`}
+                  style={{ width: `${deckPct}%` }}
+                />
+              </div>
+            </div>
           </div>
         </section>
 
