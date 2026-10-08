@@ -50,6 +50,17 @@ export default function AuthPage({ mode }: { mode: Mode }) {
       } else if (mode === 'signup') {
         const { data, error } = await db.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: callback(next) } });
         if (error) throw error;
+        // Notify admin of new signup in the background
+        fetch('/api/auth/notify-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            name: name.trim(),
+            userId: data.user?.id,
+            method: 'email',
+          }),
+        }).catch(() => {});
         if (data.session) window.location.replace(next);
         else { setNotice('Check your inbox for a confirmation link to finish creating your account. If you already have an account, sign in instead.'); setPassword(''); }
       } else if (mode === 'forgot-password') {
