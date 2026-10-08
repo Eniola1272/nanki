@@ -17,6 +17,18 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      card_reviews: {
+        Row: { id: string; user_id: string; deck_id: string; card_id: string; rating: string; reviewed_at: string; study_day: string };
+        Insert: { id: string; user_id: string; deck_id: string; card_id: string; rating: string; reviewed_at: string; study_day: string };
+        Update: never;
+        Relationships: [];
+      };
+      review_preferences: {
+        Row: { user_id: string; new_cards: number; reviews: number };
+        Insert: { user_id: string; new_cards: number; reviews: number };
+        Update: { new_cards?: number; reviews?: number };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string
@@ -277,6 +289,7 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
+      save_mistake_flashcards: { Args: { p_deck_id: string; p_title: string; p_category: string; p_cards: Json }; Returns: Json };
       content_like_stats: {
         Args: Record<string, never>
         Returns: { kind: string; content_id: string; like_count: number; liked_by_me: boolean }[]

@@ -2,6 +2,7 @@
 
 import { use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import MistakeFlashcards from '@/components/nanki/MistakeFlashcards';
 import LikeButton from '@/components/nanki/LikeButton';
 import QuizResults from '@/components/nanki/QuizResults';
 import { useNankiStore } from '@/lib/nanki-store';
@@ -34,6 +35,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ quizId: 
         <p>{score.correct} correct · {score.wrong} wrong · {score.unanswered} unanswered</p>
         <p>{result.negativeMarking ? `True/False negative marking: −0.5 per wrong branch. ${score.penalty} points deducted.` : 'Negative marking off.'}</p>
         <LikeButton kind="quiz" id={quizId} />
+        <MistakeFlashcards key={result.id} attempt={result} />
         <p>{new Date(result.completedAt).toLocaleString()} · +{attemptXp(result)} XP</p>
         <p>{difference === null ? 'Your first recorded attempt on this quiz.' : `${difference > 0 ? '+' : ''}${difference} accuracy percentage points vs. your previous attempt (${percentage(previous!)}%).`}</p>
         <p>{result.synced ? 'Saved to your account' : userId === 'guest' ? 'Saved on this device only' : 'Saved on this device · waiting to sync'}</p>

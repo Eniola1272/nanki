@@ -28,6 +28,7 @@ export interface Quiz extends CommunityContent {
 }
 
 export interface Card {
+  source?: { quizId: string; questionId: string; branch?: number; attemptId: string };
   id: string;
   front: string;
   back: string;

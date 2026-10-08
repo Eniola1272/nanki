@@ -34,7 +34,7 @@ interface NankiStore {
   /** Fires a Sonner info toast. Kept for backward compat with existing callers. */
   triggerToast: (msg: string) => void;
   handleSaveQuiz: (quiz: Quiz) => Promise<boolean>;
-  handleSaveDeck: (deck: Deck) => Promise<boolean>;
+  handleSaveDeck: (deck: Deck, mistakeImport?: boolean) => Promise<boolean>;
   handleDeleteQuiz: (id: string) => void;
   handleDeleteDeck: (id: string) => void;
   handleCompleteQuizPlay: (quizId: string, answers: Record<string, number | null>, attemptId: string, negativeMarking?: boolean) => string;
@@ -283,7 +283,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     } catch { showToast.error('Could not save quiz. Your changes are still in the editor.'); return false; }
   }, [quizzes, refreshLikes]);
 
-  const handleSaveDeck = useCallback(async (saved: Deck) => {
+  const handleSaveDeck = useCallback(async (saved: Deck, mistakeImport = false) => {
     const owner = userIdRef.current;
     if (!owner) { showToast.error('Sign in to save a deck.'); return false; }
     const existing = decks.find(d => d.id === saved.id);
@@ -291,6 +291,17 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     if (saved.published && !saved.cards.length) { showToast.error('Add at least one card before publishing.'); return false; }
     const id = existing?.ownerId === owner ? saved.id : crypto.randomUUID();
     try {
+      if (mistakeImport) {
+        const { data, error } = await createClient().rpc('save_mistake_flashcards', { p_deck_id: id, p_title: saved.title, p_category: saved.category, p_cards: saved.cards as unknown as Json });
+        if (error) throw error;
+        if (userIdRef.current !== owner) return false;
+        const result = data as { added: number; deck?: Database['public']['Tables']['decks']['Row'] };
+        if (result.deck) { const updated = dbDeckToLocal(result.deck); setDecks(prev => [updated, ...prev.filter(d => d.id !== updated.id)]); }
+        if (!result.added) { showToast.info('These mistake cards are already saved in your decks.'); return false; }
+        showToast.success(`${result.added} mistake cards saved privately.`);
+        return true;
+      }
+
       const { data, error } = await createClient().from('decks').upsert({
         id, user_id: owner, title: saved.title, description: saved.description,
         content: saved.cards as unknown as Json, category: saved.category, published: saved.published ?? false,

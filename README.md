@@ -161,3 +161,38 @@ be changed on a fresh retake.
 History distinguishes net points from unpenalized answer accuracy. Branch answers
 and scoring metadata are stored in the existing `answers` JSON; `score` retains
 the raw correct count, so fractional net scores need no database migration.
+
+## Phase 1: scheduled reviews and mistake flashcards
+
+Apply `supabase/spaced-repetition-migration.sql` **after** the setup and decks
+migrations before releasing this feature. It adds private append-only review
+records, account study preferences, and an atomic mistake-card import function.
+The migration is repeatable. This change does not apply it to the hosted database.
+
+The scheduler is a deterministic, SM-2-inspired v1 policy (not FSRS): Again returns
+in 10 minutes; Hard grows the previous interval by 1.2 with a 1-day minimum;
+Good uses the ease multiplier with a 1-day minimum; Easy uses an additional 1.3
+multiplier with a 4-day minimum. Ease stays between 1.3 and 3. Events replay in
+timestamp/ID order, so merged offline histories converge. Concurrent reviews are
+both retained. Existing cards without events are treated as new, without changing
+content. Defaults are 20 new cards and 100 review cards per local day across decks;
+same-day relearning does not consume another daily slot. Guest preferences are
+session-only; signed-in preferences are saved to the account.
+
+Every rating is written locally before advancing and queued for account sync.
+The queue is rebuilt from saved ratings on return; online, focus, and periodic
+refresh merge remote reviews. If cloud sync is unavailable, the UI explicitly says
+reviews remain on this device. Review-day attribution uses the reviewing device's
+local date. The completion bonus uses one stable deck/day session ID to avoid
+repeated bonuses on retries; later same-day ratings still update scheduling.
+
+Quiz results can convert wrong answers (optionally unanswered answers) into
+editable private flashcards. Each missed True/False branch becomes one card;
+MCQs retain options for context. Existing explanations are copied, never invented.
+Quiz/question/branch provenance prevents repeat imports even across two tabs.
+Saved cards can be edited directly in the deck editor without changing their IDs.
+
+Validation: `npm test` covers scheduling, resumed daily queues and conversion.
+`NODE_PATH=/tmp/nanki-review-db/node_modules node --test tests/review-db.cjs`
+uses an isolated installation of `@electric-sql/pglite` to check migration retries,
+account isolation, append-only permissions and duplicate imports.

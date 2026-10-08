@@ -25,20 +25,18 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
   const [backInput, setBackInput] = useState('');
   const [extraInput, setExtraInput] = useState('');
   const [cards, setCards] = useState<Card[]>(deck?.cards || []);
-  const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
 
   const { userId } = useNankiStore();
   const draft = useEditorDraft(editorDraftKey(userId, 'deck', deck?.id), { published, title, description, category, cards, frontInput, backInput, extraInput }, d => { setPublished(d.published); setTitle(d.title); setDescription(d.description); setCategory(d.category); setCards(d.cards); setFrontInput(d.frontInput); setBackInput(d.backInput); setExtraInput(d.extraInput); });
 
   const addCard = () => {
     if (!frontInput.trim() || !backInput.trim()) { alert('Please fill out both Front and Back details.'); return; }
-    const newCard: Card = { id: `card-${Date.now()}`, front: frontInput.trim(), back: backInput.trim(), extraNote: extraInput.trim() || undefined };
+    const newCard: Card = { id: crypto.randomUUID(), front: frontInput.trim(), back: backInput.trim(), extraNote: extraInput.trim() || undefined };
     setCards(p => [newCard, ...p]);
     setFrontInput(''); setBackInput(''); setExtraInput('');
   };
 
   const deleteCard = (id: string) => setCards(p => p.filter(c => c.id !== id));
-  const toggleFlip = (id: string) => setFlippedCards(p => ({ ...p, [id]: !p[id] }));
 
   const applyMarkdown = (syntax: string) => {
     if (syntax === 'b') setFrontInput(p => `${p}**bold text**`);
@@ -49,6 +47,7 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
   const handleSave = async () => {
     if (savingRef.current) return;
     if (frontInput.trim() || backInput.trim() || extraInput.trim()) { setSaveError('Add the card you are writing before saving the deck. Your draft is preserved.'); return; }
+    if (cards.some(c => !c.front.trim() || !c.back.trim())) { setSaveError('Every card needs a question and answer.'); return; }
     setSaveError('');
     savingRef.current = true;
     setSaving(true);
@@ -147,31 +146,12 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cards.map((card) => {
-                const isFlipped = !!flippedCards[card.id];
-                return (
-                  <div key={card.id} onClick={() => toggleFlip(card.id)} className="h-44 bg-transparent cursor-pointer relative group" style={{ perspective: '1000px' }}>
-                    <div className="w-full h-full relative duration-500 rounded-xl border border-outline-variant shadow-sm"
-                      style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'none' }}>
-                      <div className="absolute inset-0 bg-surface-container-lowest rounded-xl flex items-center justify-center p-4 text-center" style={{ backfaceVisibility: 'hidden' }}>
-                        <p className="font-bold text-sm md:text-base text-on-surface px-2">{card.front}</p>
-                        <div className="absolute top-2 right-2 flex gap-1 opacity-80 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={e => { e.stopPropagation(); deleteCard(card.id); }}
-                            className="bg-error-container/30 hover:bg-error-container text-error p-1 rounded-full transition-colors cursor-pointer">
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        </div>
-                        <div className="absolute bottom-2 font-caption text-[10px] text-outline italic">Click to flip</div>
-                      </div>
-                      <div className="absolute inset-0 bg-primary-container text-on-primary-container rounded-xl flex flex-col items-center justify-center p-4 text-center border-2 border-primary"
-                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                        <p className="text-xs md:text-sm leading-relaxed max-h-32 overflow-y-auto px-1">{card.back}</p>
-                        <div className="absolute bottom-2 font-caption text-[10px] text-primary-container opacity-60">Click to flip back</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {cards.map((card) => <div key={card.id} className="bg-white border rounded-3xl p-5 space-y-3">
+                {(['front', 'back', 'extraNote'] as const).map(field => <label key={field} className="block text-xs text-secondary">{field === 'front' ? 'Question' : field === 'back' ? 'Answer' : 'Explanation / note'}
+                  <textarea className="block w-full border rounded-xl p-3 text-sm text-on-surface mt-1" rows={3} value={card[field] ?? ''} onChange={e => setCards(p => p.map(c => c.id === card.id ? { ...c, [field]: e.target.value } : c))} />
+                </label>)}
+                <button type="button" onClick={() => deleteCard(card.id)} className="text-error text-sm">Delete card</button>
+              </div>)}
             </div>
           )}
         </div>

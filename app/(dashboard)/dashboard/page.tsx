@@ -1,5 +1,6 @@
 'use client';
 
+import ReviewQueue from '@/components/nanki/ReviewQueue';
 import { useRouter } from 'next/navigation';
 import ContinueQuiz from '@/components/nanki/ContinueQuiz';
 import ProgressHistory from '@/components/nanki/ProgressHistory';
@@ -123,6 +124,7 @@ export default function DashboardPage() {
           )}
         </section>
 
+        <ReviewQueue />
         <ContinueQuiz />
 
         {/* Recent Quizzes */}
