@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { branchKey } from '@/lib/quiz/scoring';
 import type { Quiz } from '@/types/nanki';
+import Brand from '@/components/shared/Brand';
 
 interface QuizResultsProps {
   quiz: Quiz;
@@ -50,7 +51,7 @@ export default function QuizResults({
       <header className="bg-surface-container-lowest border-b border-outline-variant fixed top-0 w-full z-40">
         <div className="flex justify-between items-center px-4 py-3 max-w-[800px] mx-auto">
           <div className="flex items-center gap-2">
-            <span className="font-headline-lg-mobile font-bold text-primary">Nanki</span>
+            <Brand size="sm" />
             <span className="text-secondary text-sm border-l border-outline-variant pl-2 truncate max-w-[150px] md:max-w-[400px]">
               {quiz.title} Results
             </span>

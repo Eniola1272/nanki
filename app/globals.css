@@ -177,9 +177,9 @@
   input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
   ::selection { background: #e2d2ef; color: #30213f; }
 }
-.brand-wordmark { display: inline-flex; align-items: center; gap: .5rem; color: #29252e; font-size: 1.5rem; font-weight: 800; letter-spacing: -.08em; }
-.brand-wordmark svg { padding: 7px; width: 34px; height: 34px; border-radius: 50%; color: #674099; background: #eee5f7; }
-.brand-wordmark b { color: #674099; }
+.brand-wordmark { display: inline-flex; align-items: center; gap: .55rem; color: #29252e; font-size: 1.5rem; font-weight: 800; letter-spacing: -.08em; }
+.brand-wordmark img { object-fit: contain; }
+.brand-wordmark b { color: #e8a838; }
 .study-content > main { max-width: 1080px; padding: 36px 28px; }
 .learning-welcome { background: #eee7f5; border: 1px solid #e5daed; border-radius: 28px; padding: 32px; }
 @media (max-width: 767px) { .study-content > main { padding: 24px 16px; } .learning-welcome { padding: 24px; } }

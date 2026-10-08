@@ -98,7 +98,21 @@ function HeroSection() {
         </div>
         <div className="relative overflow-hidden rounded-3xl h-[260px] md:h-[570px] order-1 md:order-2 bg-surface-dim">
           <Image src="/images/auth-botanical.png" alt="A sculptural bust made from leaves and white flowers" fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-cover object-[center_35%]" />
-          <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/85 backdrop-blur-md px-5 py-4"><p className="text-sm font-semibold">Small steps. Lasting knowledge.</p><p className="text-xs text-secondary mt-1">A calmer way to learn with Nanki.</p></div>
+          <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/90 backdrop-blur-md px-5 py-4 flex items-center gap-3.5 shadow-sm border border-white/50">
+            <div className="w-11 h-11 rounded-xl bg-[#f7f6f2] p-1 shrink-0 flex items-center justify-center border border-outline-variant/30">
+              <Image
+                src="/images/logo-icon.png"
+                alt="Nanki"
+                width={34}
+                height={34}
+                className="object-contain mix-blend-multiply"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-on-surface">Small steps. Lasting knowledge.</p>
+              <p className="text-xs text-secondary mt-0.5">A calmer way to learn with Nanki.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -807,7 +821,16 @@ function FinalCTASection() {
         <div className="absolute bottom-[-15%] right-[-5%] w-72 h-72 rounded-full border border-on-primary/20" />
       </div>
 
-      <div className="relative max-w-2xl mx-auto text-center">
+      <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center">
+        <div className="w-16 h-16 rounded-2xl bg-[#f7f6f2] p-2.5 mb-6 flex items-center justify-center shadow-lg border border-white/20">
+          <Image
+            src="/images/logo-icon.png"
+            alt="Nanki"
+            width={44}
+            height={44}
+            className="object-contain mix-blend-multiply"
+          />
+        </div>
         <h2 className="text-4xl sm:text-5xl font-extrabold text-on-primary mb-4 leading-tight">
           Your memory is your superpower.
         </h2>

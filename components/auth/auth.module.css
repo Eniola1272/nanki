@@ -12,8 +12,8 @@
 .artCopy p { font-size: 12px; line-height: 1.9; color: #ffffffc9; }
 .formPanel { align-self: center; padding: 24px 30px; width: 100%; max-width: 470px; justify-self: center; }
 .brand { display: flex; justify-content: center; align-items: center; font-size: 28px; letter-spacing: -1.4px; font-weight: 800; margin-bottom: 42px; }
-.brandIcon { display: grid; place-items: center; height: 36px; width: 36px; border-radius: 50%; background: #f0ebf7; color: #674096; margin-right: 8px; }
-.brandDot { color: #7954a1; }
+.brandIcon { display: grid; place-items: center; height: 36px; width: 36px; border-radius: 50%; background: #f7f6f2; margin-right: 8px; overflow: hidden; }
+.brandDot { color: #e8a838; }
 .heading { text-align: center; margin-bottom: 30px; }
 .heading h1 { font-size: 27px; line-height: 1.3; font-weight: 650; letter-spacing: -1px; margin: 0 0 10px; }
 .heading p { font-size: 12px; color: #7d7a81; line-height: 1.7; }

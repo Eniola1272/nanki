@@ -104,7 +104,18 @@ export default function AuthPage({ mode }: { mode: Mode }) {
         </div>
       </aside>
       <section className={styles.formPanel} aria-labelledby="auth-title">
-        <Link href="/" className={styles.brand} aria-label="Nanki home"><span className={styles.brandIcon}><Sparkles size={22} strokeWidth={1.6} /></span>nanki<span className={styles.brandDot}>.</span></Link>
+        <Link href="/" className={styles.brand} aria-label="Nanki home">
+          <span className={styles.brandIcon}>
+            <Image
+              src="/images/logo-icon.png"
+              alt=""
+              width={26}
+              height={26}
+              className="object-contain mix-blend-multiply"
+            />
+          </span>
+          nanki<span className={styles.brandDot}>.</span>
+        </Link>
         <div className={styles.heading}><h1 id="auth-title">{text.title}</h1><p>{text.subtitle}</p></div>
         <form onSubmit={submit} className={styles.form}>
           <fieldset disabled={busy !== null} className={styles.fields}>
