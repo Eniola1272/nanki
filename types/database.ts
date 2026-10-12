@@ -279,6 +279,32 @@ export interface Database {
         Update: { [_ in never]: never }
         Relationships: []
       }
+      content_reports: {
+        Row: {
+          id: string
+          user_id: string
+          quiz_id: string | null
+          deck_id: string | null
+          reason: 'inaccurate' | 'inappropriate' | 'spam' | 'copyright' | 'other'
+          details: string | null
+          status: 'pending' | 'reviewed' | 'dismissed' | 'actioned'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          quiz_id?: string | null
+          deck_id?: string | null
+          reason: 'inaccurate' | 'inappropriate' | 'spam' | 'copyright' | 'other'
+          details?: string | null
+          status?: 'pending' | 'reviewed' | 'dismissed' | 'actioned'
+          created_at?: string
+        }
+        Update: {
+          status?: 'pending' | 'reviewed' | 'dismissed' | 'actioned'
+        }
+        Relationships: []
+      }
       quiz_attempts: {
         Row: {
           id: string
@@ -321,6 +347,14 @@ export interface Database {
       content_like_stats: {
         Args: Record<string, never>
         Returns: { kind: string; content_id: string; like_count: number; liked_by_me: boolean }[]
+      }
+      get_creator_profile: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_creator_stats: {
+        Args: { p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {

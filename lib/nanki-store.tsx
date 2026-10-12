@@ -53,6 +53,8 @@ interface NankiStore {
   openUpgradeModal: (reason?: string | null) => void;
   closeUpgradeModal: () => void;
   activateTrial: () => Promise<boolean>;
+  handleForkQuiz: (quiz: Quiz) => Promise<boolean>;
+  handleForkDeck: (deck: Deck) => Promise<boolean>;
 }
 
 // ── DB ↔ Local converters ─────────────────────────────────────────────────────
@@ -450,6 +452,106 @@ export function NankiProvider({ children }: { children: ReactNode }) {
     finally { likeRequests.current.delete(key); }
   }, [quizzes, decks, likesAvailable, refreshLikes]);
 
+  const handleForkQuiz = useCallback(async (sourceQuiz: Quiz): Promise<boolean> => {
+    const owner = userIdRef.current;
+    if (!owner || owner === 'guest') {
+      showToast.info('Sign in to save a copy to your library.');
+      router.push('/auth/signup');
+      return false;
+    }
+
+    const ownedCount = quizzes.filter(q => q.ownerId === owner).length;
+    const billingProfile = {
+      plan: profile.plan,
+      subscription_status: profile.subscriptionStatus,
+      trial_ends_at: profile.trialEndsAt,
+    };
+    if (!canCreateQuiz(billingProfile, ownedCount)) {
+      openUpgradeModal('quiz_limit');
+      showToast.error(`You have reached the free limit of ${PLAN_LIMITS.FREE.maxQuizzes} quizzes. Upgrade to Pro for unlimited quizzes.`);
+      return false;
+    }
+
+    const newId = crypto.randomUUID();
+    const clonedQuestions = sourceQuiz.questions.map(q => ({
+      ...q,
+      id: crypto.randomUUID(),
+    }));
+
+    try {
+      const { data, error } = await createClient().from('quizzes').insert({
+        id: newId,
+        user_id: owner,
+        title: `Copy of ${sourceQuiz.title}`,
+        description: sourceQuiz.description,
+        category: sourceQuiz.category,
+        content: clonedQuestions as unknown as Json,
+        published: false,
+      }).select('*').single();
+
+      if (error) throw error;
+      if (userIdRef.current !== owner) return false;
+
+      const updated = dbQuizToLocal(data);
+      setQuizzes(prev => [updated, ...prev]);
+      showToast.success('Quiz copied to your library!');
+      return true;
+    } catch {
+      showToast.error('Could not copy quiz. Please try again.');
+      return false;
+    }
+  }, [quizzes, profile, openUpgradeModal, router]);
+
+  const handleForkDeck = useCallback(async (sourceDeck: Deck): Promise<boolean> => {
+    const owner = userIdRef.current;
+    if (!owner || owner === 'guest') {
+      showToast.info('Sign in to save a copy to your library.');
+      router.push('/auth/signup');
+      return false;
+    }
+
+    const ownedCount = decks.filter(d => d.ownerId === owner).length;
+    const billingProfile = {
+      plan: profile.plan,
+      subscription_status: profile.subscriptionStatus,
+      trial_ends_at: profile.trialEndsAt,
+    };
+    if (!canCreateDeck(billingProfile, ownedCount)) {
+      openUpgradeModal('deck_limit');
+      showToast.error(`You have reached the free limit of ${PLAN_LIMITS.FREE.maxDecks} decks. Upgrade to Pro for unlimited decks.`);
+      return false;
+    }
+
+    const newId = crypto.randomUUID();
+    const clonedCards = sourceDeck.cards.map(c => ({
+      ...c,
+      id: crypto.randomUUID(),
+    }));
+
+    try {
+      const { data, error } = await createClient().from('decks').insert({
+        id: newId,
+        user_id: owner,
+        title: `Copy of ${sourceDeck.title}`,
+        description: sourceDeck.description,
+        category: sourceDeck.category,
+        content: clonedCards as unknown as Json,
+        published: false,
+      }).select('*').single();
+
+      if (error) throw error;
+      if (userIdRef.current !== owner) return false;
+
+      const updated = dbDeckToLocal(data);
+      setDecks(prev => [updated, ...prev]);
+      showToast.success('Deck copied to your library!');
+      return true;
+    } catch {
+      showToast.error('Could not copy deck. Please try again.');
+      return false;
+    }
+  }, [decks, profile, openUpgradeModal, router]);
+
   // ── Delete quiz ────────────────────────────────────────────────────────────
   const handleDeleteQuiz = useCallback((id: string) => {
     const quiz = quizzes.find(q => q.id === id);
@@ -557,6 +659,8 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       openUpgradeModal,
       closeUpgradeModal,
       activateTrial,
+      handleForkQuiz,
+      handleForkDeck,
     }}>
       {children}
 

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { branchKey } from '@/lib/quiz/scoring';
 import type { Quiz } from '@/types/nanki';
 import Brand from '@/components/shared/Brand';
+import { useNankiStore } from '@/lib/nanki-store';
 
 interface QuizResultsProps {
   quiz: Quiz;
@@ -28,8 +29,10 @@ export default function QuizResults({
   onClose,
   onRetake,
 }: QuizResultsProps) {
+  const { userId, handleForkQuiz } = useNankiStore();
   const [showReview, setShowReview] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'mistakes' | 'all'>('mistakes');
+  const [forking, setForking] = useState(false);
 
   const totalQuestions = correctCount + wrongCount;
   const scorePercent = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
@@ -109,6 +112,24 @@ export default function QuizResults({
                 <span className="material-symbols-outlined text-[18px]">refresh</span>
                 <span>Retake Quiz</span>
               </button>
+              {quiz.ownerId !== userId && (
+                <button
+                  onClick={async () => {
+                    setForking(true);
+                    try {
+                      await handleForkQuiz(quiz);
+                    } finally {
+                      setForking(false);
+                    }
+                  }}
+                  disabled={forking}
+                  className="flex-1 bg-surface-container-lowest text-on-surface border border-outline-variant font-bold px-6 py-3 rounded-full flex items-center justify-center gap-1.5 hover:bg-surface-container-low transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                  title="Save a private copy to your personal library"
+                >
+                  <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                  <span>{forking ? 'Copying…' : 'Save Copy'}</span>
+                </button>
+              )}
               {wrongCount > 0 ? (
                 <button
                   onClick={() => {

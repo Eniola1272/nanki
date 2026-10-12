@@ -8,9 +8,10 @@ import { databaseQuizId } from '@/lib/progress/storage';
 import LikeButton from './LikeButton';
 import type { Deck } from '@/types/nanki';
 export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>void}) {
- const {decks,userId,handleCompleteFlashcards}=useNankiStore();
+ const {decks,userId,handleCompleteFlashcards,handleForkDeck}=useNankiStore();
  const {events,limits,ready,notice,rate,sync}=useReviews();
  const [flippedId,setFlippedId]=useState<string|null>(null),[now,setNow]=useState(()=>new Date()),[finishing,setFinishing]=useState(false);
+ const [forking,setForking]=useState(false);
  const lock=useRef(false);
  useEffect(()=>{const timer=setInterval(()=>setNow(new Date()),30000);return()=>clearInterval(timer);},[]);
  const {queue,states}=reviewQueue(decks,events,limits,now);
@@ -22,7 +23,28 @@ export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>vo
  const finish=async()=>{setFinishing(true);try{if(reviewed.size){const sessionId=await databaseQuizId(userId,`reviews:${deck.id}:${localDay(now)}`);handleCompleteFlashcards({...deck,cards:deck.cards.filter(c=>reviewed.has(c.id))},sessionId);}onClose();}finally{setFinishing(false);}};
  if(!ready)return <p className="p-10 text-center">Loading your review schedule…</p>;
  return <div className="min-h-screen bg-surface text-on-surface flex flex-col">
-  <header className="bg-white border-b px-5 py-4 flex items-center justify-between gap-4"><button onClick={onClose} className="text-primary">← Dashboard</button><span className="text-sm truncate">{deck.title}</span>{deck.ownerId===userId&&<Link className="text-primary text-sm shrink-0" href={`/deck/${deck.id}/edit`}>Edit cards</Link>}</header>
+  <header className="bg-white border-b px-5 py-4 flex items-center justify-between gap-4">
+    <button onClick={onClose} className="text-primary font-bold">← Dashboard</button>
+    <span className="text-sm truncate font-bold">{deck.title}</span>
+    <div className="flex items-center gap-2">
+      {deck.ownerId===userId ? (
+        <Link className="text-primary text-sm shrink-0 font-bold hover:underline" href={`/deck/${deck.id}/edit`}>Edit cards</Link>
+      ) : (
+        <button
+          onClick={async () => {
+            setForking(true);
+            try { await handleForkDeck(deck); }
+            finally { setForking(false); }
+          }}
+          disabled={forking}
+          className="text-primary text-xs shrink-0 font-bold hover:underline cursor-pointer disabled:opacity-50 flex items-center gap-1"
+        >
+          <span className="material-symbols-outlined text-[15px]">content_copy</span>
+          {forking ? 'Copying…' : 'Fork to library'}
+        </button>
+      )}
+    </div>
+  </header>
   <main className="w-full max-w-3xl mx-auto flex-1 p-5 md:p-10 space-y-6">
    {notice&&<p role="status" className="bg-primary-fixed rounded-2xl p-4 text-sm">{notice} <button onClick={()=>void sync()} className="underline text-primary">Retry sync</button></p>}
    {userId==='guest'&&<p className="text-sm text-secondary">Guest reviews are saved on this device. Sign in to keep future reviews across devices.</p>}
@@ -39,8 +61,24 @@ export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>vo
    </>:<section className="bg-white rounded-3xl border p-8 text-center space-y-5">
     <h1 className="text-3xl font-semibold">{deck.cards.length?'Congratulations, you are all done!':'No flashcards yet'}</h1>
     <p className="text-secondary">{deck.cards.length?`No more cards are ready in this deck within today's limits. You reviewed ${reviewed.size} cards today. Cards marked Again return after 10 minutes.`:'Add cards to this deck to start learning.'}</p>
-    <LikeButton kind="deck" id={deck.id}/>
-    <button disabled={finishing} onClick={()=>void finish()} className="bg-primary text-white rounded-full px-6 py-3">{finishing?'Saving…':'Done'}</button>
+    <div className="flex items-center justify-center gap-3">
+      <LikeButton kind="deck" id={deck.id}/>
+      {deck.ownerId !== userId && (
+        <button
+          disabled={forking}
+          onClick={async () => {
+            setForking(true);
+            try { await handleForkDeck(deck); }
+            finally { setForking(false); }
+          }}
+          className="border border-outline-variant text-on-surface font-bold text-sm px-5 py-2.5 rounded-full hover:bg-surface-container-high transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined text-[16px]">content_copy</span>
+          {forking ? 'Copying…' : 'Save Copy'}
+        </button>
+      )}
+    </div>
+    <button disabled={finishing} onClick={()=>void finish()} className="bg-primary text-white rounded-full px-6 py-3 font-bold hover:bg-primary-container cursor-pointer">{finishing?'Saving…':'Done'}</button>
    </section>}
   </main>
  </div>;

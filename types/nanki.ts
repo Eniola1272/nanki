@@ -2,10 +2,12 @@ import type { PlanTier, SubscriptionStatus, BillingCycle } from './billing';
 
 export interface CommunityContent {
   ownerId?: string | null;
+  ownerName?: string | null;
   published?: boolean;
   likeCount?: number;
   likedByMe?: boolean;
   createdAt?: string;
+  forkedFromId?: string | null;
 }
 
 export interface Question {
