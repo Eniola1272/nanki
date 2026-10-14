@@ -5,6 +5,11 @@ import { branchKey } from '@/lib/quiz/scoring';
 import type { Quiz } from '@/types/nanki';
 import Brand from '@/components/shared/Brand';
 import { useNankiStore } from '@/lib/nanki-store';
+import { hasPlanFeature } from '@/lib/billing/plans';
+import { exportQuizToAnki, downloadTextFile } from '@/lib/export/anki';
+import { printQuizWorksheet } from '@/lib/export/pdf';
+import UpgradeModal from '@/components/billing/UpgradeModal';
+import { showToast } from '@/lib/utils/toast';
 
 interface QuizResultsProps {
   quiz: Quiz;
@@ -29,10 +34,32 @@ export default function QuizResults({
   onClose,
   onRetake,
 }: QuizResultsProps) {
-  const { userId, handleForkQuiz } = useNankiStore();
+  const { userId, handleForkQuiz, profile } = useNankiStore();
   const [showReview, setShowReview] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'mistakes' | 'all'>('mistakes');
   const [forking, setForking] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const canExport = hasPlanFeature(profile, 'exportPdfAnki');
+
+  const handleExportPdf = (includeAnswers: boolean) => {
+    if (!canExport) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    printQuizWorksheet(quiz, { includeAnswers });
+  };
+
+  const handleExportAnki = () => {
+    if (!canExport) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    const tsv = exportQuizToAnki(quiz);
+    const filename = `${quiz.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-anki.txt`;
+    downloadTextFile(filename, tsv);
+    showToast.success('Anki deck exported successfully!');
+  };
 
   const totalQuestions = correctCount + wrongCount;
   const scorePercent = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
@@ -153,6 +180,34 @@ export default function QuizResults({
                   <span>Review Questions</span>
                 </button>
               )}
+            </div>
+
+            {/* Export & Study Sheet Toolbar */}
+            <div className="w-full flex flex-wrap gap-2 justify-center items-center pt-3 border-t border-outline-variant/60">
+              <button
+                onClick={() => handleExportPdf(false)}
+                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Print blank exam worksheet"
+              >
+                <span className="material-symbols-outlined text-[16px]">print</span>
+                <span>Print Worksheet</span>
+              </button>
+              <button
+                onClick={() => handleExportPdf(true)}
+                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Print study guide with full answer key and explanations"
+              >
+                <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                <span>Study Guide (PDF)</span>
+              </button>
+              <button
+                onClick={handleExportAnki}
+                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Download Anki-compatible TSV deck"
+              >
+                <span className="material-symbols-outlined text-[16px]">download</span>
+                <span>Export to Anki</span>
+              </button>
             </div>
           </div>
         ) : (
@@ -328,6 +383,12 @@ export default function QuizResults({
           </div>
         )}
       </main>
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason="Upgrade to Student Pro to export study worksheets to PDF and flashcard decks to Anki."
+      />
     </div>
   );
 }

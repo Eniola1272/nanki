@@ -7,11 +7,18 @@ import { advance, cardKey, localDay, reviewQueue, type Rating } from '@/lib/revi
 import { databaseQuizId } from '@/lib/progress/storage';
 import LikeButton from './LikeButton';
 import type { Deck } from '@/types/nanki';
+import { hasPlanFeature } from '@/lib/billing/plans';
+import { exportDeckToAnki, downloadTextFile } from '@/lib/export/anki';
+import { printDeckCards } from '@/lib/export/pdf';
+import UpgradeModal from '@/components/billing/UpgradeModal';
+import { showToast } from '@/lib/utils/toast';
+
 export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>void}) {
- const {decks,userId,handleCompleteFlashcards,handleForkDeck}=useNankiStore();
+ const {decks,userId,profile,handleCompleteFlashcards,handleForkDeck}=useNankiStore();
  const {events,limits,ready,notice,rate,sync}=useReviews();
  const [flippedId,setFlippedId]=useState<string|null>(null),[now,setNow]=useState(()=>new Date()),[finishing,setFinishing]=useState(false);
  const [forking,setForking]=useState(false);
+ const [showUpgradeModal,setShowUpgradeModal]=useState(false);
  const lock=useRef(false);
  useEffect(()=>{const timer=setInterval(()=>setNow(new Date()),30000);return()=>clearInterval(timer);},[]);
  const {queue,states}=reviewQueue(decks,events,limits,now);
@@ -21,12 +28,39 @@ export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>vo
  const reviewed=new Set(events.filter(e=>e.deckId===deck.id&&e.day===localDay(now)).map(e=>e.cardId));
  const rateCard=(rating:Rating)=>{if(!current||lock.current)return;lock.current=true;if(rate(deck.id,current.id,rating)){setFlippedId(null);setNow(new Date());}queueMicrotask(()=>{lock.current=false;});};
  const finish=async()=>{setFinishing(true);try{if(reviewed.size){const sessionId=await databaseQuizId(userId,`reviews:${deck.id}:${localDay(now)}`);handleCompleteFlashcards({...deck,cards:deck.cards.filter(c=>reviewed.has(c.id))},sessionId);}onClose();}finally{setFinishing(false);}};
+ const canExport = hasPlanFeature(profile, 'exportPdfAnki');
+ const handleExportAnki = () => {
+   if (!canExport) {
+     setShowUpgradeModal(true);
+     return;
+   }
+   const tsv = exportDeckToAnki(deck);
+   const filename = `${deck.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-anki.txt`;
+   downloadTextFile(filename, tsv);
+   showToast.success('Deck exported to Anki format!');
+ };
+ const handleExportPdf = () => {
+   if (!canExport) {
+     setShowUpgradeModal(true);
+     return;
+   }
+   printDeckCards(deck);
+ };
+
  if(!ready)return <p className="p-10 text-center">Loading your review schedule…</p>;
  return <div className="min-h-screen bg-surface text-on-surface flex flex-col">
   <header className="bg-white border-b px-5 py-4 flex items-center justify-between gap-4">
     <button onClick={onClose} className="text-primary font-bold">← Dashboard</button>
     <span className="text-sm truncate font-bold">{deck.title}</span>
     <div className="flex items-center gap-2">
+      <button onClick={handleExportPdf} title="Print flashcards" className="text-secondary hover:text-primary text-xs font-semibold flex items-center gap-1 cursor-pointer">
+        <span className="material-symbols-outlined text-[16px]">print</span>
+        <span className="hidden sm:inline">Print</span>
+      </button>
+      <button onClick={handleExportAnki} title="Export to Anki" className="text-secondary hover:text-primary text-xs font-semibold flex items-center gap-1 cursor-pointer">
+        <span className="material-symbols-outlined text-[16px]">download</span>
+        <span className="hidden sm:inline">Anki</span>
+      </button>
       {deck.ownerId===userId ? (
         <Link className="text-primary text-sm shrink-0 font-bold hover:underline" href={`/deck/${deck.id}/edit`}>Edit cards</Link>
       ) : (
@@ -81,5 +115,10 @@ export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>vo
     <button disabled={finishing} onClick={()=>void finish()} className="bg-primary text-white rounded-full px-6 py-3 font-bold hover:bg-primary-container cursor-pointer">{finishing?'Saving…':'Done'}</button>
    </section>}
   </main>
+  <UpgradeModal
+    isOpen={showUpgradeModal}
+    onClose={() => setShowUpgradeModal(false)}
+    reason="Upgrade to Student Pro to export study worksheets to PDF and flashcard decks to Anki."
+  />
  </div>;
 }
