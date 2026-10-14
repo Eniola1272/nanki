@@ -186,26 +186,26 @@ export default function QuizResults({
             <div className="w-full flex flex-wrap gap-2 justify-center items-center pt-3 border-t border-outline-variant/60">
               <button
                 onClick={() => handleExportPdf(false)}
-                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all flex items-center gap-1.5 cursor-pointer"
+                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all duration-150 active:scale-90 flex items-center gap-1.5 cursor-pointer touch-manipulation select-none"
                 title="Print blank exam worksheet"
               >
-                <span className="material-symbols-outlined text-[16px]">print</span>
+                <span className="material-symbols-outlined text-[16px] transition-transform duration-150">print</span>
                 <span>Print Worksheet</span>
               </button>
               <button
                 onClick={() => handleExportPdf(true)}
-                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all flex items-center gap-1.5 cursor-pointer"
+                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all duration-150 active:scale-90 flex items-center gap-1.5 cursor-pointer touch-manipulation select-none"
                 title="Print study guide with full answer key and explanations"
               >
-                <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                <span className="material-symbols-outlined text-[16px] transition-transform duration-150">menu_book</span>
                 <span>Study Guide (PDF)</span>
               </button>
               <button
                 onClick={handleExportAnki}
-                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all flex items-center gap-1.5 cursor-pointer"
+                className="text-xs font-bold text-secondary hover:text-primary px-3.5 py-1.5 rounded-full border border-outline-variant hover:bg-surface-container-low transition-all duration-150 active:scale-90 flex items-center gap-1.5 cursor-pointer touch-manipulation select-none"
                 title="Download Anki-compatible TSV deck"
               >
-                <span className="material-symbols-outlined text-[16px]">download</span>
+                <span className="material-symbols-outlined text-[16px] transition-transform duration-150">download</span>
                 <span>Export to Anki</span>
               </button>
             </div>

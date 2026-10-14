@@ -91,7 +91,7 @@ export default function DiscoverPage() {
             {results.map(({ kind, content }) => (
               <article
                 key={`${kind}:${content.id}`}
-                className="flex flex-col justify-between rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4 hover:shadow-sm transition-shadow"
+                className="card-interactive flex flex-col justify-between rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 space-y-4 hover:shadow-sm active:scale-[0.985] transition-all duration-150 touch-manipulation select-none"
               >
                 <div>
                   <div className="flex items-center justify-between text-xs text-secondary mb-2">
@@ -101,7 +101,7 @@ export default function DiscoverPage() {
                     {content.ownerId ? (
                       <Link
                         href={`/creator/${content.ownerId}`}
-                        className="text-primary hover:underline font-semibold flex items-center gap-1"
+                        className="text-primary hover:underline font-semibold flex items-center gap-1 active:scale-95 transition-transform"
                         title="View creator collection"
                       >
                         <span className="material-symbols-outlined text-[13px]">person</span>
@@ -128,24 +128,24 @@ export default function DiscoverPage() {
                     <button
                       onClick={() => onFork(kind, content)}
                       disabled={forkingId === content.id}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary px-2.5 py-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary px-2.5 py-1.5 rounded-lg hover:bg-surface-container-high transition-all duration-150 active:scale-90 cursor-pointer disabled:opacity-50 touch-manipulation"
                       title="Save a copy to your library"
                     >
-                      <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                      <span className="material-symbols-outlined text-[15px] transition-transform duration-150">content_copy</span>
                       {forkingId === content.id ? 'Copying…' : 'Fork'}
                     </button>
 
                     {/* Report button */}
                     <button
                       onClick={() => setReportingItem({ kind, id: content.id, title: content.title })}
-                      className="text-on-surface-variant/50 hover:text-error p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer"
+                      className="text-on-surface-variant/50 hover:text-error p-1.5 rounded-lg hover:bg-surface-container-high transition-all duration-150 active:scale-80 cursor-pointer touch-manipulation"
                       title="Report this content"
                     >
-                      <span className="material-symbols-outlined text-[15px]">flag</span>
+                      <span className="material-symbols-outlined text-[15px] transition-transform duration-150">flag</span>
                     </button>
                   </div>
 
-                  <Link href={`/${kind}/${content.id}/play`} className="text-xs font-bold text-primary hover:underline">
+                  <Link href={`/${kind}/${content.id}/play`} className="text-xs font-bold text-primary hover:underline transition-transform duration-150 active:scale-95 inline-block touch-manipulation">
                     {kind === 'quiz' ? 'Take quiz' : 'Study cards'} →
                   </Link>
                 </div>

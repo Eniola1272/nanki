@@ -27,10 +27,10 @@ export default function NankiShell({ children }: NankiShellProps) {
       {/* FAB */}
       <button
         onClick={() => setShowCreatorSelector(true)}
-        className="fixed bottom-20 md:bottom-8 right-6 w-14 h-14 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary-container hover:shadow-2xl active:scale-95 transition-all z-40 cursor-pointer"
+        className="fixed bottom-20 md:bottom-8 right-6 w-14 h-14 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary-container hover:shadow-2xl active:scale-90 active:rotate-45 active:shadow-md transition-all duration-150 z-40 cursor-pointer touch-manipulation select-none"
         title="Create item"
       >
-        <span className="material-symbols-outlined text-[28px]">add</span>
+        <span className="material-symbols-outlined text-[28px] transition-transform duration-150">add</span>
       </button>
     </div>
   );

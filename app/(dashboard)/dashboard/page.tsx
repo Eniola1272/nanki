@@ -149,7 +149,7 @@ export default function DashboardPage() {
                 <div
                   key={item.id}
                   onClick={() => router.push(`/quiz/${item.id}/play`)}
-                  className="min-w-[270px] max-w-[270px] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-3xl p-4 flex flex-col hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all cursor-pointer shrink-0 relative group"
+                  className="card-interactive min-w-[270px] max-w-[270px] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-3xl p-4 flex flex-col hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] active:scale-[0.97] active:shadow-sm transition-all duration-150 cursor-pointer shrink-0 relative group select-none touch-manipulation"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <span className="px-2.5 py-1 rounded-lg bg-surface-container text-on-surface-variant text-[10px] font-bold uppercase tracking-wide">
@@ -157,7 +157,7 @@ export default function DashboardPage() {
                     </span>
                     <button
                       onClick={e => { e.stopPropagation(); router.push(`/quiz/${item.id}/edit`); }}
-                      className="text-outline hover:text-primary p-1 rounded-full hover:bg-surface-container-low transition-colors cursor-pointer"
+                      className="text-outline hover:text-primary p-1.5 rounded-full hover:bg-surface-container-low transition-all duration-150 active:scale-80 cursor-pointer"
                       title="Edit Quiz"
                     >
                       <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -192,7 +192,7 @@ export default function DashboardPage() {
             <h3 className="text-base md:text-lg font-bold text-on-surface">Flashcard Decks</h3>
             <button
               onClick={() => router.push('/discover')}
-              className="text-xs text-primary hover:underline cursor-pointer"
+              className="text-xs text-primary hover:underline cursor-pointer transition-transform duration-150 active:scale-95"
             >
               Discover more
             </button>
@@ -208,12 +208,12 @@ export default function DashboardPage() {
                 <div
                   key={deck.id}
                   onClick={() => router.push(`/deck/${deck.id}/play`)}
-                  className="min-w-[240px] max-w-[240px] aspect-[4/3] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-3xl p-4 flex flex-col justify-center items-center text-center hover:shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all cursor-pointer shrink-0 relative group"
+                  className="card-interactive min-w-[240px] max-w-[240px] aspect-[4/3] bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-3xl p-4 flex flex-col justify-center items-center text-center hover:shadow-[0_4px_24px_rgba(0,0,0,0.04)] active:scale-[0.97] active:shadow-sm transition-all duration-150 cursor-pointer shrink-0 relative group select-none touch-manipulation"
                 >
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); router.push(`/deck/${deck.id}/edit`); }}
-                      className="text-outline hover:text-primary p-1.5 rounded-full hover:bg-surface-container-low transition-colors cursor-pointer"
+                      className="text-outline hover:text-primary p-1.5 rounded-full hover:bg-surface-container-low transition-all duration-150 active:scale-80 cursor-pointer"
                       title="Edit Deck"
                     >
                       <span className="material-symbols-outlined text-[18px]">edit</span>

@@ -42,11 +42,11 @@ export default function BottomNav() {
                 onClick={() => handleNav(item)}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
-                className={`flex flex-col items-center justify-center w-20 py-1 rounded-2xl transition-all active:scale-95 cursor-pointer ${
+                className={`flex flex-col items-center justify-center w-20 py-1 rounded-2xl transition-all duration-150 active:scale-90 active:opacity-75 select-none touch-manipulation cursor-pointer ${
                   active ? 'text-primary font-bold' : 'text-secondary hover:text-on-surface'
                 }`}
               >
-                <span className={`material-symbols-outlined mb-0.5 text-[24px] ${active ? 'fill' : ''}`}>
+                <span className={`material-symbols-outlined mb-0.5 text-[24px] transition-transform duration-150 ${active ? 'fill' : ''}`}>
                   {item.icon}
                 </span>
                 <span className="text-[11px] tracking-wide font-medium">{item.label}</span>
@@ -67,7 +67,7 @@ export default function BottomNav() {
                 onClick={() => handleNav(item)}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
-                className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all cursor-pointer text-left ${
+                className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer text-left select-none touch-manipulation ${
                   active ? 'text-on-primary bg-primary font-semibold shadow-sm' : 'text-secondary hover:bg-surface-container-low hover:text-on-surface'
                 }`}
               >

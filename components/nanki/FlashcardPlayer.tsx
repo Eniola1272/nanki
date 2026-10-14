@@ -84,13 +84,19 @@ export default function FlashcardPlayer({deck,onClose}:{deck:Deck;onClose:()=>vo
    {userId==='guest'&&<p className="text-sm text-secondary">Guest reviews are saved on this device. Sign in to keep future reviews across devices.</p>}
    {current?<>
     <div className="flex justify-between text-sm text-secondary"><span>{remaining} ready in this deck</span><span>{reviewed.size} reviewed today</span></div>
-    <article className="bg-white rounded-3xl border border-outline-variant p-6 md:p-10 space-y-6 min-h-72">
-     <p className="text-xs uppercase tracking-widest text-primary">{flipped?'Answer':'Recall the answer'}</p>
+    <article
+      onClick={() => !flipped && setFlippedId(current.id)}
+      className="card-interactive bg-white rounded-3xl border border-outline-variant p-6 md:p-10 space-y-6 min-h-72 transition-all duration-150 cursor-pointer active:scale-[0.985] select-none touch-manipulation shadow-xs"
+    >
+     <div className="flex justify-between items-center">
+       <p className="text-xs uppercase tracking-widest text-primary font-bold">{flipped?'Answer':'Recall the answer'}</p>
+       {!flipped && <span className="text-[11px] text-secondary">Tap card to reveal</span>}
+     </div>
      <p className="text-lg leading-relaxed whitespace-pre-wrap break-words">{flipped?current.back:current.front}</p>
      {flipped&&current.extraNote&&<p className="border-t pt-5 text-sm text-secondary whitespace-pre-wrap">{current.extraNote}</p>}
      {current.source&&<Link className="inline-block text-sm text-primary" href={`/quiz/${current.source.quizId}/results?attempt=${encodeURIComponent(current.source.attemptId)}`}>Original quiz attempt →</Link>}
     </article>
-    {!flipped?<button className="w-full bg-primary text-white rounded-full py-4" onClick={()=>setFlippedId(current.id)}>Show answer</button>:<><p className="text-sm text-center text-secondary">How well did you remember?</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{(['again','hard','good','easy'] as Rating[]).map(r=>{const next=advance(states[cardKey(deck.id,current.id)],r,now.toISOString(),localDay(now));return <button key={r} onClick={()=>rateCard(r)} className="border border-primary/20 rounded-2xl p-4 bg-white hover:bg-primary-fixed text-primary"><span className="capitalize block font-semibold">{r}</span><span className="text-xs">{next.interval<1?'10 minutes':`${next.interval} day${next.interval===1?'':'s'}`}</span></button>;})}</div></>}
+    {!flipped?<button className="w-full bg-primary text-white font-bold rounded-full py-4 shadow-md hover:bg-primary-container active:scale-95 transition-all duration-150 cursor-pointer touch-manipulation select-none" onClick={()=>setFlippedId(current.id)}>Show answer</button>:<><p className="text-sm text-center text-secondary">How well did you remember?</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{(['again','hard','good','easy'] as Rating[]).map(r=>{const next=advance(states[cardKey(deck.id,current.id)],r,now.toISOString(),localDay(now));return <button key={r} onClick={()=>rateCard(r)} className="border border-primary/20 rounded-2xl p-4 bg-white hover:bg-primary-fixed text-primary transition-all duration-150 active:scale-90 active:bg-primary/10 select-none touch-manipulation cursor-pointer shadow-xs active:shadow-none"><span className="capitalize block font-semibold">{r}</span><span className="text-xs">{next.interval<1?'10 minutes':`${next.interval} day${next.interval===1?'':'s'}`}</span></button>;})}</div></>}
     <p className="text-xs text-secondary text-center">Each rating saves your place. You can leave and continue later.</p>
    </>:<section className="bg-white rounded-3xl border p-8 text-center space-y-5">
     <h1 className="text-3xl font-semibold">{deck.cards.length?'Congratulations, you are all done!':'No flashcards yet'}</h1>

@@ -113,7 +113,7 @@ export default function QuizPlay({ quiz, userId, onClose, onComplete }: QuizPlay
               const value = userAnswers[key];
               return <fieldset key={key} className="rounded-xl border border-outline-variant p-4 space-y-3">
                 <legend className="text-sm font-semibold">{String.fromCharCode(65 + index)}. {option}</legend>
-                <div className="flex flex-wrap gap-2">{[{ label: 'True', value: 1 }, { label: 'False', value: 0 }, { label: 'Unanswered', value: null }].map(choice => <button key={choice.label} type="button" aria-pressed={(value ?? null) === choice.value} onClick={() => setDraft(p => ({ ...p, userAnswers: { ...p.userAnswers, [key]: choice.value } }))} className={`rounded-lg px-4 py-2 border text-sm ${(value ?? null) === choice.value ? 'bg-primary text-on-primary border-primary' : 'border-outline-variant'}`}>{choice.label}</button>)}</div>
+                <div className="flex flex-wrap gap-2">{[{ label: 'True', value: 1 }, { label: 'False', value: 0 }, { label: 'Unanswered', value: null }].map(choice => <button key={choice.label} type="button" aria-pressed={(value ?? null) === choice.value} onClick={() => setDraft(p => ({ ...p, userAnswers: { ...p.userAnswers, [key]: choice.value } }))} className={`rounded-xl px-4 py-2.5 border text-sm font-medium transition-all duration-150 active:scale-92 cursor-pointer touch-manipulation select-none ${(value ?? null) === choice.value ? 'bg-primary text-on-primary border-primary shadow-sm' : 'border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low'}`}>{choice.label}</button>)}</div>
               </fieldset>;
             }) : currentQuestion.options.map((option, index) => {
               const isSelected = selectedIdx === index;
@@ -121,11 +121,11 @@ export default function QuizPlay({ quiz, userId, onClose, onComplete }: QuizPlay
                 <label
                   key={index}
                   onClick={() => setDraft(p => ({ ...p, selectedIdx: index }))}
-                  className={`group cursor-pointer relative flex items-center p-4 rounded-xl border transition-all duration-200 bg-surface-container-lowest transform active:scale-[0.99] ${
+                  className={`quiz-option-choice group cursor-pointer relative flex items-center p-4 rounded-xl border transition-all duration-150 bg-surface-container-lowest transform active:scale-[0.97] select-none touch-manipulation ${
                     isSelected ? 'border-primary bg-primary-fixed/40 shadow-sm' : 'border-outline-variant hover:border-primary hover:bg-surface-container-low'
                   }`}
                 >
-                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all mr-3 flex items-center justify-center ${isSelected ? 'border-primary' : 'border-outline-variant'}`}>
+                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all duration-150 mr-3 flex items-center justify-center ${isSelected ? 'border-primary' : 'border-outline-variant'}`}>
                     {isSelected && <div className="w-3 h-3 bg-primary rounded-full"></div>}
                   </div>
                   <span className={`font-body-lg text-sm md:text-base ${isSelected ? 'text-primary font-semibold' : 'text-on-surface'}`}>{option}</span>
@@ -138,22 +138,22 @@ export default function QuizPlay({ quiz, userId, onClose, onComplete }: QuizPlay
         <div className="w-full mt-8 flex justify-between items-center z-10">
           <button
             onClick={() => setDraft(p => ({ ...p, flagged: { ...p.flagged, [currentQuestion.id]: !p.flagged[currentQuestion.id] } }))}
-            className={`font-label-md text-xs md:text-sm hover:text-on-surface transition-colors px-4 py-2 flex items-center gap-1.5 cursor-pointer rounded-full hover:bg-surface-container-low ${flagged[currentQuestion.id] ? 'text-orange-500 font-bold' : 'text-secondary'}`}
+            className={`font-label-md text-xs md:text-sm hover:text-on-surface transition-all duration-150 active:scale-90 px-4 py-2 flex items-center gap-1.5 cursor-pointer rounded-full hover:bg-surface-container-low touch-manipulation select-none ${flagged[currentQuestion.id] ? 'text-orange-500 font-bold' : 'text-secondary'}`}
           >
-            <span className={`material-symbols-outlined text-[18px] ${flagged[currentQuestion.id] ? 'fill text-orange-500' : ''}`}>flag</span>
+            <span className={`material-symbols-outlined text-[18px] transition-transform duration-150 ${flagged[currentQuestion.id] ? 'fill text-orange-500' : ''}`}>flag</span>
             <span>{flagged[currentQuestion.id] ? 'Flagged' : 'Flag for review'}</span>
           </button>
           <button
             onClick={handleNext}
             disabled={!canAdvance}
-            className={`font-label-md px-6 py-2.5 rounded-full transition-all transform active:scale-[0.97] flex items-center gap-1 border shadow-sm ${
+            className={`font-label-md px-6 py-2.5 rounded-full transition-all duration-150 transform active:scale-95 flex items-center gap-1 border shadow-sm touch-manipulation select-none ${
               !canAdvance
                 ? 'bg-surface-container-high text-outline border-outline-variant cursor-not-allowed opacity-60'
                 : 'bg-primary text-on-primary border-primary hover:bg-primary-container hover:shadow-md cursor-pointer'
             }`}
           >
             <span>{currentIdx + 1 === questions.length ? 'Finish' : 'Next'}</span>
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            <span className="material-symbols-outlined text-[18px] transition-transform duration-150">arrow_forward</span>
           </button>
         </div>
       </main>

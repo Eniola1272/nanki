@@ -32,32 +32,32 @@ export default function Header({ hideAvatar = false }: HeaderProps) {
 
         <button
           onClick={() => router.push('/profile')}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-200"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-highest transition-all duration-150 cursor-pointer active:scale-90 touch-manipulation select-none"
           title="Streak Details"
         >
           <span className="font-label-md text-primary font-bold">{profile.streak}</span>
-          <span className="material-symbols-outlined text-orange-500 fill text-[18px]">local_fire_department</span>
+          <span className="material-symbols-outlined text-orange-500 fill text-[18px] transition-transform duration-150">local_fire_department</span>
         </button>
 
         <button
           onClick={() => router.push('/workspaces')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-200"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-highest transition-all duration-150 cursor-pointer active:scale-90 touch-manipulation select-none"
           title="Team Workspaces"
         >
-          <span className="material-symbols-outlined text-primary text-[18px]">groups</span>
+          <span className="material-symbols-outlined text-primary text-[18px] transition-transform duration-150">groups</span>
           <span className="hidden sm:inline font-label-md text-xs font-semibold text-on-surface">Teams</span>
         </button>
 
         <button
           onClick={() => router.push('/analytics')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-200"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-highest transition-all duration-150 cursor-pointer active:scale-90 touch-manipulation select-none"
           title="Performance Analytics"
         >
-          <span className="material-symbols-outlined text-primary text-[18px]">insights</span>
+          <span className="material-symbols-outlined text-primary text-[18px] transition-transform duration-150">insights</span>
           <span className="hidden sm:inline font-label-md text-xs font-semibold text-on-surface">Analytics</span>
         </button>
 
-        {userId !== 'guest' && <button onClick={() => void resetAllState()} disabled={signingOut} className="text-xs font-bold text-secondary hover:text-primary px-2 py-2 disabled:opacity-50">{signingOut ? 'Logging out…' : 'Log out'}</button>}
+        {userId !== 'guest' && <button onClick={() => void resetAllState()} disabled={signingOut} className="text-xs font-bold text-secondary hover:text-primary px-2 py-2 transition-all duration-150 active:scale-90 touch-manipulation cursor-pointer disabled:opacity-50">{signingOut ? 'Logging out…' : 'Log out'}</button>}
       </div>
     </header>
   );

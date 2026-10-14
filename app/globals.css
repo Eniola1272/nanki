@@ -171,12 +171,72 @@
 @layer base {
   body { font-family: "Plus Jakarta Sans", sans-serif; -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { letter-spacing: -.035em; }
-  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  button, a, input, select, textarea, [role="button"], label.cursor-pointer {
+    -webkit-tap-highlight-color: rgba(103, 64, 153, 0.12);
+    touch-action: manipulation;
+  }
   button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
   input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
   ::selection { background: #e2d2ef; color: #30213f; }
 }
+
+/* Tactile mobile tap & click animations */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+.btn-tactile {
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1),
+              box-shadow 0.15s ease,
+              background-color 0.15s ease,
+              opacity 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active,
+.btn-tactile:active {
+  transform: scale(0.95);
+}
+
+/* Micro-icon spring animations on click/tap */
+button:not(:disabled):active .material-symbols-outlined,
+.icon-tactile:active,
+.material-symbols-outlined.icon-interactive:active {
+  transform: scale(0.85);
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Interactive cards tactile pop */
+.card-interactive,
+[data-card="interactive"] {
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.4, 1),
+              box-shadow 0.18s ease,
+              border-color 0.18s ease;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.card-interactive:active,
+[data-card="interactive"]:active {
+  transform: scale(0.975);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Quiz option tactile state */
+.quiz-option-choice {
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1),
+              border-color 0.15s ease,
+              background-color 0.15s ease,
+              box-shadow 0.15s ease;
+  touch-action: manipulation;
+}
+
+.quiz-option-choice:active {
+  transform: scale(0.975);
+}
+
 .brand-wordmark { display: inline-flex; align-items: center; gap: .55rem; color: #29252e; font-size: 1.5rem; font-weight: 800; letter-spacing: -.08em; }
 .brand-wordmark img { object-fit: contain; }
 .brand-wordmark b { color: #e8a838; }
@@ -184,3 +244,4 @@
 .learning-welcome { background: #eee7f5; border: 1px solid #e5daed; border-radius: 28px; padding: 32px; }
 @media (max-width: 767px) { .study-content > main { padding: 24px 16px; } .learning-welcome { padding: 24px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+

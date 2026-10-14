@@ -17,8 +17,8 @@ export default function LikeButton({ kind, id }: { kind: 'quiz' | 'deck'; id: st
       setBusy(true);
       try { await toggleLike(kind, id); } finally { setBusy(false); }
     }}
-    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold disabled:opacity-60 ${item.likedByMe ? 'bg-tertiary/10 border-tertiary text-tertiary' : 'border-current/20'}`}>
-    <span className={`material-symbols-outlined text-[16px] ${item.likedByMe ? 'fill' : ''}`}>thumb_up</span>
+    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold disabled:opacity-60 transition-all duration-150 active:scale-90 touch-manipulation select-none cursor-pointer ${item.likedByMe ? 'bg-tertiary/10 border-tertiary text-tertiary shadow-xs' : 'border-current/20 hover:bg-surface-container-low'}`}>
+    <span className={`material-symbols-outlined text-[16px] transition-transform duration-150 ${item.likedByMe ? 'fill scale-110' : ''}`}>thumb_up</span>
     {busy ? 'Saving…' : `${item.likeCount ?? 0} · ${item.likedByMe ? 'Helpful ✓' : 'Helpful'}`}
   </button>;
 }
