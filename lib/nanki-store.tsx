@@ -387,7 +387,12 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       await refreshLikes();
       showToast.success(saved.published ? 'Public quiz saved.' : 'Private quiz saved.');
       return true;
-    } catch { showToast.error('Could not save quiz. Your changes are still in the editor.'); return false; }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Database error';
+      console.error('Save quiz error:', err);
+      showToast.error('Could not save quiz.', { description: msg });
+      return false;
+    }
   }, [quizzes, profile, openUpgradeModal, refreshLikes]);
 
   const handleSaveDeck = useCallback(async (saved: Deck, mistakeImport = false) => {
@@ -437,7 +442,12 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       await refreshLikes();
       showToast.success(saved.published ? 'Public deck saved.' : 'Private deck saved.');
       return true;
-    } catch { showToast.error('Could not save deck. Your changes are still in the editor.'); return false; }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Database error';
+      console.error('Save deck error:', err);
+      showToast.error('Could not save deck.', { description: msg });
+      return false;
+    }
   }, [decks, profile, openUpgradeModal, refreshLikes]);
 
   const toggleLike = useCallback(async (kind: 'quiz' | 'deck', id: string) => {
