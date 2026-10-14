@@ -3,6 +3,7 @@ import type { PlanTier, SubscriptionStatus, BillingCycle } from './billing';
 export interface CommunityContent {
   ownerId?: string | null;
   ownerName?: string | null;
+  organizationId?: string | null;
   published?: boolean;
   likeCount?: number;
   likedByMe?: boolean;

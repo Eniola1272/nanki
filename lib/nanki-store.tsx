@@ -62,7 +62,10 @@ interface NankiStore {
 function dbQuizToLocal(row: DbQuiz): Quiz {
   return {
     id: row.id,
-    ownerId: row.user_id, published: row.published, createdAt: row.created_at,
+    ownerId: row.user_id,
+    organizationId: row.organization_id,
+    published: row.published,
+    createdAt: row.created_at,
     title: row.title,
     description: row.description ?? '',
     category: row.category ?? '',
@@ -74,7 +77,10 @@ function dbQuizToLocal(row: DbQuiz): Quiz {
 function dbDeckToLocal(row: Database['public']['Tables']['decks']['Row']): Deck {
   return {
     id: row.id,
-    ownerId: row.user_id, published: row.published, createdAt: row.created_at,
+    ownerId: row.user_id,
+    organizationId: row.organization_id,
+    published: row.published,
+    createdAt: row.created_at,
     title: row.title,
     description: row.description ?? '',
     category: row.category ?? '',
@@ -372,6 +378,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       const { data, error } = await createClient().from('quizzes').upsert({
         id, user_id: owner, title: saved.title, description: saved.description,
         content: saved.questions as unknown as Json, category: saved.category, published: saved.published ?? false,
+        organization_id: saved.organizationId || null,
       }).select('*').single();
       if (error) throw error;
       if (userIdRef.current !== owner) return false;
@@ -421,6 +428,7 @@ export function NankiProvider({ children }: { children: ReactNode }) {
       const { data, error } = await createClient().from('decks').upsert({
         id, user_id: owner, title: saved.title, description: saved.description,
         content: saved.cards as unknown as Json, category: saved.category, published: saved.published ?? false,
+        organization_id: saved.organizationId || null,
       }).select('*').single();
       if (error) throw error;
       if (userIdRef.current !== owner) return false;

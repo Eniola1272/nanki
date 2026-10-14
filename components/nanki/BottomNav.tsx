@@ -7,6 +7,7 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
   { id: 'discover', label: 'Discover', icon: 'explore', href: '/discover' },
   { id: 'create', label: 'Create', icon: 'add_circle', href: null },
+  { id: 'workspaces', label: 'Teams', icon: 'groups', href: '/workspaces' },
   { id: 'profile', label: 'Profile', icon: 'person', href: '/profile' },
 ];
 

@@ -59,6 +59,7 @@ export default function DeckEditor({ deck, onSave, onClose }: DeckEditorProps) {
         category,
         description: description.trim() || `Study card deck focused on ${category}`,
         author: deck?.author || '@you',
+        organizationId: deck?.organizationId,
         cards,
       });
       if (saved) draft.clear();

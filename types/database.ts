@@ -133,6 +133,7 @@ export interface Database {
           id: string
           name: string
           slug: string
+          description: string | null
           owner_id: string
           is_premium: boolean
           stripe_customer_id: string | null
@@ -143,6 +144,7 @@ export interface Database {
           id?: string
           name: string
           slug: string
+          description?: string | null
           owner_id: string
           is_premium?: boolean
           stripe_customer_id?: string | null
@@ -152,6 +154,7 @@ export interface Database {
         Update: {
           name?: string
           slug?: string
+          description?: string | null
           owner_id?: string
           is_premium?: boolean
           stripe_customer_id?: string | null
@@ -238,6 +241,7 @@ export interface Database {
           category: string | null
           content: Json
           user_id: string | null
+          organization_id: string | null
           published: boolean
           shareable_slug: string | null
           created_at: string
@@ -250,6 +254,7 @@ export interface Database {
           category?: string | null
           content?: Json
           user_id?: string | null
+          organization_id?: string | null
           published?: boolean
           shareable_slug?: string | null
           created_at?: string
@@ -261,6 +266,7 @@ export interface Database {
           category?: string | null
           content?: Json
           user_id?: string | null
+          organization_id?: string | null
           published?: boolean
           shareable_slug?: string | null
           updated_at?: string
@@ -302,6 +308,61 @@ export interface Database {
         }
         Update: {
           status?: 'pending' | 'reviewed' | 'dismissed' | 'actioned'
+        }
+        Relationships: []
+      }
+      organization_invites: {
+        Row: {
+          id: string
+          organization_id: string
+          email: string
+          role: 'ADMIN' | 'MEMBER' | 'VIEWER'
+          invited_by: string
+          token: string
+          status: 'pending' | 'accepted' | 'revoked'
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          email: string
+          role?: 'ADMIN' | 'MEMBER' | 'VIEWER'
+          invited_by: string
+          token: string
+          status?: 'pending' | 'accepted' | 'revoked'
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          status?: 'pending' | 'accepted' | 'revoked'
+          role?: 'ADMIN' | 'MEMBER' | 'VIEWER'
+        }
+        Relationships: []
+      }
+      organization_activities: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          action: 'created_quiz' | 'created_deck' | 'completed_quiz' | 'reviewed_cards' | 'joined_workspace' | 'invited_member'
+          target_title: string
+          target_id: string | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          action: 'created_quiz' | 'created_deck' | 'completed_quiz' | 'reviewed_cards' | 'joined_workspace' | 'invited_member'
+          target_title: string
+          target_id?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          target_title?: string
         }
         Relationships: []
       }
@@ -370,3 +431,5 @@ export type Organization = Database['public']['Tables']['organizations']['Row']
 export type Membership = Database['public']['Tables']['memberships']['Row']
 export type DbQuiz = Database['public']['Tables']['quizzes']['Row']
 export type QuizAttempt = Database['public']['Tables']['quiz_attempts']['Row']
+export type OrganizationInvite = Database['public']['Tables']['organization_invites']['Row']
+export type OrganizationActivity = Database['public']['Tables']['organization_activities']['Row']

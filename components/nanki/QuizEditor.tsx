@@ -87,6 +87,7 @@ export default function QuizEditor({ quiz, onSave, onClose }: QuizEditorProps) {
         description: description.trim() || 'No description provided.',
         category,
         masteredPercentage: quiz?.masteredPercentage || 0,
+        organizationId: quiz?.organizationId,
         questions: questions.map(q => ({ ...q, text: q.text.trim() || 'Untitled Question' })),
       });
       if (saved) draft.clear();
