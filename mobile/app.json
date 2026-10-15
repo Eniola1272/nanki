@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Nanki",
+    "slug": "nanki",
+    "version": "1.0.0",
+    "scheme": "nanki",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F4F3F0",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "bundleIdentifier": "com.nanki.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.nanki.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#674099",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
