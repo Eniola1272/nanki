@@ -121,6 +121,17 @@ export const StorageService = {
     }
   },
 
+  async deleteQuiz(quizId: string): Promise<void> {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.QUIZZES);
+      const userQuizzes: Quiz[] = data ? JSON.parse(data) : [];
+      const filtered = userQuizzes.filter((q) => q.id !== quizId);
+      await AsyncStorage.setItem(KEYS.QUIZZES, JSON.stringify(filtered));
+    } catch (e) {
+      console.error('Failed to delete quiz:', e);
+    }
+  },
+
   // Decks (Sample + User-Created)
   async getDecks(): Promise<Deck[]> {
     try {
@@ -160,6 +171,17 @@ export const StorageService = {
       }
     } catch (e) {
       console.error('Failed to save deck:', e);
+    }
+  },
+
+  async deleteDeck(deckId: string): Promise<void> {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.DECKS);
+      const userDecks: Deck[] = data ? JSON.parse(data) : [];
+      const filtered = userDecks.filter((d) => d.id !== deckId);
+      await AsyncStorage.setItem(KEYS.DECKS, JSON.stringify(filtered));
+    } catch (e) {
+      console.error('Failed to delete deck:', e);
     }
   },
 

@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Deck, Flashcard } from '../types';
 import { StorageService } from '../lib/storage';
+import { shareDeckAsAnki } from '../lib/export';
 
 interface DeckCardsScreenProps {
   deck: Deck;
@@ -38,6 +39,49 @@ export const DeckCardsScreen: React.FC<DeckCardsScreenProps> = ({
       c.front.toLowerCase().includes(search.toLowerCase()) ||
       c.back.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleExportAnki = async () => {
+    await shareDeckAsAnki(deck);
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    Alert.alert('Delete Card', 'Are you sure you want to delete this card from the deck?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          const updatedDeck: Deck = {
+            ...deck,
+            cards: deck.cards.filter((c) => c.id !== cardId),
+          };
+          await StorageService.saveDeck(updatedDeck);
+          onDeckUpdated(updatedDeck);
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteDeck = () => {
+    Alert.alert(
+      'Delete Deck',
+      `Are you sure you want to delete "${deck.title}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Deck',
+          style: 'destructive',
+          onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await StorageService.deleteDeck(deck.id);
+            Alert.alert('Deck Deleted', `"${deck.title}" has been removed from your library.`);
+            onBack();
+          },
+        },
+      ]
+    );
+  };
 
   const handleAddCard = async () => {
     if (!frontText.trim() || !backText.trim()) {
@@ -93,8 +137,13 @@ export const DeckCardsScreen: React.FC<DeckCardsScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.deckInfoCard}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{deck.category}</Text>
+          <View style={styles.deckBadgeRow}>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{deck.category}</Text>
+            </View>
+            <Pressable onPress={handleExportAnki} style={styles.exportAnkiPill}>
+              <Text style={styles.exportAnkiText}>📤 Export to Anki</Text>
+            </Pressable>
           </View>
           <Text style={styles.deckTitle}>{deck.title}</Text>
           <Text style={styles.deckCountSubtitle}>
@@ -132,8 +181,17 @@ export const DeckCardsScreen: React.FC<DeckCardsScreenProps> = ({
           ) : (
             filteredCards.map((card, idx) => (
               <View key={card.id || idx} style={styles.cardItem}>
-                <View style={styles.cardNumberBadge}>
-                  <Text style={styles.cardNumberText}>#{idx + 1}</Text>
+                <View style={styles.cardTopRow}>
+                  <View style={styles.cardNumberBadge}>
+                    <Text style={styles.cardNumberText}>#{idx + 1}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => handleDeleteCard(card.id)}
+                    hitSlop={8}
+                    style={styles.cardDeleteBtn}
+                  >
+                    <Text style={styles.cardDeleteText}>✕</Text>
+                  </Pressable>
                 </View>
                 <View style={styles.cardItemContent}>
                   <Text style={styles.frontText}>{card.front}</Text>
@@ -147,6 +205,11 @@ export const DeckCardsScreen: React.FC<DeckCardsScreenProps> = ({
             ))
           )}
         </View>
+
+        {/* Delete Entire Deck Action */}
+        <Pressable onPress={handleDeleteDeck} style={styles.deleteDeckBtn}>
+          <Text style={styles.deleteDeckBtnText}>🗑️ Delete Entire Deck</Text>
+        </Pressable>
 
         <View style={{ height: 60 }} />
       </ScrollView>
@@ -438,5 +501,57 @@ const styles = StyleSheet.create({
     color: Colors.onPrimary,
     fontSize: 15,
     fontWeight: '800',
+  },
+  deckBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  exportAnkiPill: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  exportAnkiText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  cardDeleteBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardDeleteText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.secondary,
+  },
+  deleteDeckBtn: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: Colors.error + '14',
+    borderWidth: 1,
+    borderColor: Colors.error + '35',
+  },
+  deleteDeckBtnText: {
+    color: Colors.error,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

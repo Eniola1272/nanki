@@ -13,6 +13,7 @@ import { Quiz, Question, Deck } from '../types';
 import { StorageService } from '../lib/storage';
 import { generateMistakeFlashcards } from '../lib/mistakes';
 import { MistakeFlashcardsModal } from '../components/MistakeFlashcardsModal';
+import { shareQuizResults } from '../lib/export';
 
 interface QuizPlayScreenProps {
   quiz: Quiz;
@@ -289,6 +290,18 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
             ]}
           >
             <Text style={styles.retakeButtonText}>Retake Full Quiz</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              shareQuizResults(quiz, score.percentage, score.correct, score.total);
+            }}
+            style={({ pressed }) => [
+              styles.shareScoreButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.shareScoreText}>📤 Share Quiz Score</Text>
           </Pressable>
 
           <Pressable
@@ -1010,6 +1023,19 @@ const styles = StyleSheet.create({
     color: Colors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
+  },
+  shareScoreButton: {
+    width: '100%',
+    backgroundColor: Colors.accent,
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  shareScoreText: {
+    color: Colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
   },
   dashboardButton: {
     width: '100%',
