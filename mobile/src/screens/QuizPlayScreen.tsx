@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,12 +20,34 @@ interface QuizPlayScreenProps {
 export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  // For True/False branches: questionIndex -> { branchIndex: 1 (true) | 0 (false) | null }
   const [tfAnswers, setTfAnswers] = useState<Record<number, Record<number, number | null>>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'mistakes'>('all');
+
+  // Pacing timer
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!isCompleted) {
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isCompleted]);
+
+  const formatTimer = (totalSecs: number) => {
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   const currentQuestion = quiz.questions[currentIndex];
   const totalQuestions = quiz.questions.length;
@@ -48,7 +70,6 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
     setTfAnswers((prev) => {
       const qAnswers = prev[currentIndex] || {};
       const currentVal = qAnswers[branchIndex];
-      // Toggle off if already selected
       const newVal = currentVal === value ? null : value;
       return {
         ...prev,
@@ -75,7 +96,6 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
       setShowExplanation(false);
     } else {
       setIsCompleted(true);
-      // Award XP
       const score = calculateScore();
       StorageService.addXP(score.correct * 20);
     }
@@ -125,6 +145,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   if (isCompleted) {
     const passed = score.percentage >= 70;
     const hasMistakes = score.incorrectIndices.length > 0;
+    const avgSecsPerQ = Math.round(elapsedSeconds / totalQuestions);
 
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -140,6 +161,18 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             <Text style={styles.scoreSubText}>
               {score.correct} of {score.total} questions answered correctly
             </Text>
+
+            <View style={styles.statsMetricsRow}>
+              <View style={styles.metricPill}>
+                <Text style={styles.metricLabel}>Pacing</Text>
+                <Text style={styles.metricVal}>{avgSecsPerQ}s / question</Text>
+              </View>
+              <View style={styles.metricPill}>
+                <Text style={styles.metricLabel}>Total Time</Text>
+                <Text style={styles.metricVal}>{formatTimer(elapsedSeconds)}</Text>
+              </View>
+            </View>
+
             <View style={styles.xpRow}>
               <Text style={styles.xpAwardText}>⚡ +{score.correct * 20} XP Earned</Text>
             </View>
@@ -173,6 +206,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
               setSelectedAnswers({});
               setTfAnswers({});
               setShowExplanation(false);
+              setElapsedSeconds(0);
               setIsCompleted(false);
             }}
             style={({ pressed }) => [
@@ -209,7 +243,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Navigation Bar */}
+        {/* Navigation Bar with Timer */}
         <View style={styles.navBar}>
           <Pressable
             onPress={() => {
@@ -221,9 +255,10 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             <Text style={styles.closeText}>✕</Text>
           </Pressable>
 
-          <Text style={styles.quizHeaderTitle} numberOfLines={1}>
-            {quiz.title}
-          </Text>
+          {/* Live Timer Pill */}
+          <View style={styles.timerPill}>
+            <Text style={styles.timerText}>⏱️ {formatTimer(elapsedSeconds)}</Text>
+          </View>
 
           <Pressable onPress={toggleFlag} style={styles.flagButton}>
             <Text style={[styles.flagText, flagged[currentQuestion.id] && styles.flagActive]}>
@@ -242,7 +277,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
               Question {currentIndex + 1} of {totalQuestions}
             </Text>
             <Text style={styles.categoryLabel}>
-              {isTF ? 'True / False Multi-Branch' : quiz.category}
+              {isTF ? 'True / False Statements' : quiz.category}
             </Text>
           </View>
         </View>
@@ -442,11 +477,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.onSurface,
   },
-  quizHeaderTitle: {
-    fontSize: 15,
+  timerPill: {
+    backgroundColor: Colors.surfaceCard,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  timerText: {
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.onSurface,
-    maxWidth: '65%',
   },
   flagButton: {
     width: 36,
@@ -777,11 +819,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 14,
   },
+  statsMetricsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    marginVertical: 12,
+  },
+  metricPill: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: Colors.secondary,
+    fontWeight: '600',
+  },
+  metricVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    marginTop: 2,
+  },
   xpRow: {
     backgroundColor: Colors.accent,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
+    marginTop: 4,
   },
   xpAwardText: {
     fontSize: 13,

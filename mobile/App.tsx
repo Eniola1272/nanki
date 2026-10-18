@@ -16,6 +16,7 @@ import { Colors } from './src/theme/colors';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { QuizPlayScreen } from './src/screens/QuizPlayScreen';
 import { FlashcardScreen } from './src/screens/FlashcardScreen';
+import { DeckCardsScreen } from './src/screens/DeckCardsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { CreateScreen } from './src/screens/CreateScreen';
 import { StorageService } from './src/lib/storage';
@@ -27,6 +28,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [activeDeck, setActiveDeck] = useState<Deck | null>(null);
+  const [inspectingDeck, setInspectingDeck] = useState<Deck | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -52,6 +54,7 @@ export default function App() {
     setActiveTab(tab);
     setActiveQuiz(null);
     setActiveDeck(null);
+    setInspectingDeck(null);
     setIsCreating(false);
   };
 
@@ -84,6 +87,27 @@ export default function App() {
           }}
         />
       </View>
+    );
+  }
+
+  // If currently browsing/editing cards inside a deck:
+  if (inspectingDeck) {
+    return (
+      <SafeAreaView style={styles.appContainer}>
+        <StatusBar style="dark" />
+        <DeckCardsScreen
+          deck={inspectingDeck}
+          onStartStudy={() => {
+            setActiveDeck(inspectingDeck);
+            setInspectingDeck(null);
+          }}
+          onBack={() => setInspectingDeck(null)}
+          onDeckUpdated={(updated) => {
+            setInspectingDeck(updated);
+            loadContent();
+          }}
+        />
+      </SafeAreaView>
     );
   }
 
@@ -138,7 +162,7 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <DashboardScreen
             onSelectQuiz={(quiz) => setActiveQuiz(quiz)}
-            onSelectDeck={(deck) => setActiveDeck(deck)}
+            onSelectDeck={(deck) => setInspectingDeck(deck)}
             onOpenProfile={() => setActiveTab('profile')}
             onOpenCreate={() => setIsCreating(true)}
           />
@@ -304,7 +328,7 @@ export default function App() {
                     key={deck.id}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setActiveDeck(deck);
+                      setInspectingDeck(deck);
                     }}
                     style={({ pressed }) => [
                       styles.tabItemCard,
@@ -316,7 +340,7 @@ export default function App() {
                     </View>
                     <Text style={styles.itemTitle}>{deck.title}</Text>
                     <Text style={styles.itemSubtitle}>
-                      {deck.cards.length} Flashcards (Spaced Repetition)
+                      {deck.cards.length} Flashcards · Tap to browse cards →
                     </Text>
                   </Pressable>
                 ))

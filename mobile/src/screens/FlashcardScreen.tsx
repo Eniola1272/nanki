@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   SafeAreaView,
+  Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Deck, Rating } from '../types';
 import { advanceSM2 } from '../lib/scheduler';
+import { StorageService } from '../lib/storage';
 
 interface FlashcardScreenProps {
   deck: Deck;
@@ -21,21 +23,69 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
   const [isFlipped, setIsFlipped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
 
+  const flipAnimation = useRef(new Animated.Value(0)).current;
+
   const totalCards = deck.cards.length;
   const currentCard = deck.cards[currentIndex];
   const isFinished = currentIndex >= totalCards;
 
   const handleFlip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsFlipped(!isFlipped);
+    if (isFlipped) {
+      Animated.spring(flipAnimation, {
+        toValue: 0,
+        friction: 8,
+        tension: 12,
+        useNativeDriver: true,
+      }).start(() => setIsFlipped(false));
+    } else {
+      Animated.spring(flipAnimation, {
+        toValue: 180,
+        friction: 8,
+        tension: 12,
+        useNativeDriver: true,
+      }).start(() => setIsFlipped(true));
+    }
   };
 
-  const handleRate = (rating: Rating) => {
+  const handleRate = async (rating: Rating) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    advanceSM2(undefined, rating);
+    const updatedState = advanceSM2(undefined, rating);
+    if (currentCard) {
+      updatedState.cardId = currentCard.id;
+      await StorageService.saveReviewState(updatedState);
+    }
+
     setReviewedCount((prev) => prev + 1);
-    setIsFlipped(false);
-    setCurrentIndex((prev) => prev + 1);
+
+    // Reset card rotation smoothly before advancing
+    Animated.timing(flipAnimation, {
+      toValue: 0,
+      duration: 100,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsFlipped(false);
+      setCurrentIndex((prev) => prev + 1);
+    });
+  };
+
+  // 3D rotation interpolation
+  const frontInterpolate = flipAnimation.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const backInterpolate = flipAnimation.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['180deg', '360deg'],
+  });
+
+  const frontAnimatedStyle = {
+    transform: [{ rotateY: frontInterpolate }],
+  };
+
+  const backAnimatedStyle = {
+    transform: [{ rotateY: backInterpolate }],
   };
 
   if (isFinished) {
@@ -48,9 +98,9 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
 
           <View style={styles.statsCard}>
             <Text style={styles.statsBigText}>{reviewedCount}</Text>
-            <Text style={styles.statsLabel}>Cards Reviewed Today</Text>
+            <Text style={styles.statsLabel}>Cards Reviewed This Session</Text>
             <View style={styles.xpBadge}>
-              <Text style={styles.xpText}>⚡ +{reviewedCount * 10} XP Earned</Text>
+              <Text style={styles.xpText}>⚡ +{reviewedCount * 15} XP Earned</Text>
             </View>
           </View>
 
@@ -66,7 +116,7 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text style={styles.restartButtonText}>Review Again</Text>
+            <Text style={styles.restartButtonText}>Review Deck Again</Text>
           </Pressable>
 
           <Pressable
@@ -105,45 +155,69 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
             {deck.title}
           </Text>
 
-          <Text style={styles.cardCounter}>
-            {currentIndex + 1} / {totalCards}
-          </Text>
+          <View style={styles.counterBadge}>
+            <Text style={styles.cardCounter}>
+              {currentIndex + 1} / {totalCards}
+            </Text>
+          </View>
         </View>
 
-        {/* Flashcard Surface */}
+        {/* 3D Animated Card Flip Container */}
         <View style={styles.cardContainer}>
-          <Pressable
-            onPress={handleFlip}
-            style={({ pressed }) => [
-              styles.flashcard,
-              isFlipped && styles.flashcardFlipped,
-              pressed && styles.flashcardPressed,
-            ]}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardBadge}>
-                {isFlipped ? 'EXPLANATION & ANSWER' : 'RECALL PROMPT'}
-              </Text>
-              <Text style={styles.tapHint}>Tap card to flip</Text>
-            </View>
+          <Pressable onPress={handleFlip} style={styles.cardPressable}>
+            {/* FRONT OF CARD */}
+            <Animated.View
+              style={[
+                styles.flashcard,
+                styles.cardFront,
+                frontAnimatedStyle,
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.badgePill}>
+                  <Text style={styles.cardBadge}>RECALL PROMPT</Text>
+                </View>
+                <Text style={styles.tapHint}>Tap card to flip 🔄</Text>
+              </View>
 
-            <View style={styles.cardBody}>
-              <Text style={styles.cardText}>
-                {isFlipped ? currentCard.back : currentCard.front}
-              </Text>
+              <View style={styles.cardBody}>
+                <Text style={styles.cardText}>{currentCard.front}</Text>
+              </View>
 
-              {isFlipped && currentCard.extraNote && (
-                <View style={styles.extraNoteBox}>
-                  <Text style={styles.extraNoteText}>
-                    💡 {currentCard.extraNote}
+              <Text style={styles.flipLabel}>Tap to reveal clinical answer</Text>
+            </Animated.View>
+
+            {/* BACK OF CARD */}
+            <Animated.View
+              style={[
+                styles.flashcard,
+                styles.cardBack,
+                backAnimatedStyle,
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <View style={[styles.badgePill, { backgroundColor: Colors.successContainer }]}>
+                  <Text style={[styles.cardBadge, { color: Colors.success }]}>
+                    EXPLANATION & ANSWER
                   </Text>
                 </View>
-              )}
-            </View>
+                <Text style={styles.tapHint}>Tap card to flip 🔄</Text>
+              </View>
 
-            <Text style={styles.flipLabel}>
-              {isFlipped ? 'Tap to view question' : 'Tap to reveal answer'}
-            </Text>
+              <View style={styles.cardBody}>
+                <Text style={styles.cardTextBack}>{currentCard.back}</Text>
+
+                {currentCard.extraNote && (
+                  <View style={styles.extraNoteBox}>
+                    <Text style={styles.extraNoteText}>
+                      💡 {currentCard.extraNote}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.flipLabel}>Tap to view recall prompt</Text>
+            </Animated.View>
           </Pressable>
         </View>
 
@@ -157,7 +231,7 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
                 pressed && styles.buttonPressed,
               ]}
             >
-              <Text style={styles.showAnswerText}>Show Answer</Text>
+              <Text style={styles.showAnswerText}>Show Answer 💡</Text>
             </Pressable>
           ) : (
             <View style={styles.ratingGrid}>
@@ -252,9 +326,15 @@ const styles = StyleSheet.create({
     color: Colors.onSurface,
     maxWidth: '65%',
   },
+  counterBadge: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   cardCounter: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: Colors.primary,
   },
   cardContainer: {
@@ -262,8 +342,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  flashcard: {
+  cardPressable: {
     flex: 1,
+  },
+  flashcard: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: Colors.surfaceCard,
     borderRadius: 32,
     padding: 26,
@@ -272,24 +359,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
+    backfaceVisibility: 'hidden',
   },
-  flashcardFlipped: {
+  cardFront: {
+    zIndex: 1,
+  },
+  cardBack: {
     borderColor: Colors.primary,
-    backgroundColor: '#FAFAF9',
-  },
-  flashcardPressed: {
-    transform: [{ scale: 0.985 }],
+    backgroundColor: '#FCFAF7',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  badgePill: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
   cardBadge: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 0.5,
@@ -297,6 +391,7 @@ const styles = StyleSheet.create({
   tapHint: {
     fontSize: 11,
     color: Colors.secondary,
+    fontWeight: '500',
   },
   cardBody: {
     flex: 1,
@@ -304,14 +399,21 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   cardText: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '700',
     color: Colors.onSurface,
+    lineHeight: 32,
+    textAlign: 'center',
+  },
+  cardTextBack: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.primary,
     lineHeight: 30,
     textAlign: 'center',
   },
   extraNoteBox: {
-    marginTop: 20,
+    marginTop: 18,
     backgroundColor: Colors.accent,
     padding: 14,
     borderRadius: 16,
@@ -358,7 +460,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   rateAgain: {
     backgroundColor: '#FEE2E2',
@@ -378,7 +480,7 @@ const styles = StyleSheet.create({
   },
   rateTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.onSurface,
     marginBottom: 2,
   },
