@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
-import { Quiz } from '../types';
+import { Quiz, Question } from '../types';
+import { StorageService } from '../lib/storage';
 
 interface QuizPlayScreenProps {
   quiz: Quiz;
@@ -19,14 +20,19 @@ interface QuizPlayScreenProps {
 export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  // For True/False branches: questionIndex -> { branchIndex: 1 (true) | 0 (false) | null }
+  const [tfAnswers, setTfAnswers] = useState<Record<number, Record<number, number | null>>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'mistakes'>('all');
 
   const currentQuestion = quiz.questions[currentIndex];
   const totalQuestions = quiz.questions.length;
+  const isTF = currentQuestion.type === 'true-false';
   const progressPercent = ((currentIndex + 1) / totalQuestions) * 100;
 
+  // Single choice selection
   const handleSelectOption = (optionIndex: number) => {
     Haptics.selectionAsync();
     setSelectedAnswers((prev) => ({
@@ -34,6 +40,24 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
       [currentIndex]: optionIndex,
     }));
     setShowExplanation(true);
+  };
+
+  // True/False branch selection
+  const handleSelectTfBranch = (branchIndex: number, value: number) => {
+    Haptics.selectionAsync();
+    setTfAnswers((prev) => {
+      const qAnswers = prev[currentIndex] || {};
+      const currentVal = qAnswers[branchIndex];
+      // Toggle off if already selected
+      const newVal = currentVal === value ? null : value;
+      return {
+        ...prev,
+        [currentIndex]: {
+          ...qAnswers,
+          [branchIndex]: newVal,
+        },
+      };
+    });
   };
 
   const toggleFlag = () => {
@@ -51,34 +75,63 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
       setShowExplanation(false);
     } else {
       setIsCompleted(true);
+      // Award XP
+      const score = calculateScore();
+      StorageService.addXP(score.correct * 20);
     }
   };
 
   // Score calculations
   const calculateScore = () => {
     let correct = 0;
+    const incorrectIndices: number[] = [];
+
     quiz.questions.forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.correctAnswer) {
-        correct++;
+      if (q.type === 'true-false') {
+        const branches = q.branchAnswers || {};
+        const userBranches = tfAnswers[idx] || {};
+        let allBranchesCorrect = true;
+        Object.keys(branches).forEach((bIdxStr) => {
+          const bIdx = Number(bIdxStr);
+          if (userBranches[bIdx] !== branches[bIdx]) {
+            allBranchesCorrect = false;
+          }
+        });
+        if (allBranchesCorrect && Object.keys(branches).length > 0) {
+          correct++;
+        } else {
+          incorrectIndices.push(idx);
+        }
+      } else {
+        if (selectedAnswers[idx] === q.correctAnswer) {
+          correct++;
+        } else {
+          incorrectIndices.push(idx);
+        }
       }
     });
+
     return {
       correct,
       total: totalQuestions,
       percentage: Math.round((correct / totalQuestions) * 100),
+      incorrectIndices,
     };
   };
 
+  const score = calculateScore();
+
+  // Completion / Results View
   if (isCompleted) {
-    const score = calculateScore();
     const passed = score.percentage >= 70;
+    const hasMistakes = score.incorrectIndices.length > 0;
 
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.resultContainer}>
+        <ScrollView contentContainerStyle={styles.resultScrollContent}>
           <Text style={styles.resultEmoji}>{passed ? '🎉' : '📚'}</Text>
           <Text style={styles.resultTitle}>
-            {passed ? 'Quiz Mastered!' : 'Keep Practicing!'}
+            {passed ? 'Quiz Mastered!' : 'Quiz Completed!'}
           </Text>
           <Text style={styles.resultSubtitle}>{quiz.title}</Text>
 
@@ -92,11 +145,33 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             </View>
           </View>
 
+          {/* Review Mistakes Button */}
+          {hasMistakes && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setReviewFilter('mistakes');
+                setCurrentIndex(score.incorrectIndices[0]);
+                setShowExplanation(true);
+                setIsCompleted(false);
+              }}
+              style={({ pressed }) => [
+                styles.reviewMistakesButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.reviewMistakesText}>
+                ⚠️ Review Missed Questions ({score.incorrectIndices.length})
+              </Text>
+            </Pressable>
+          )}
+
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setCurrentIndex(0);
               setSelectedAnswers({});
+              setTfAnswers({});
               setShowExplanation(false);
               setIsCompleted(false);
             }}
@@ -105,7 +180,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text style={styles.retakeButtonText}>Retake Quiz</Text>
+            <Text style={styles.retakeButtonText}>Retake Full Quiz</Text>
           </Pressable>
 
           <Pressable
@@ -120,13 +195,16 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
           >
             <Text style={styles.dashboardButtonText}>Back to Dashboard</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   const selectedIdx = selectedAnswers[currentIndex];
-  const hasAnswered = selectedIdx !== undefined;
+  const currentTfAnswers = tfAnswers[currentIndex] || {};
+  const hasAnswered = isTF
+    ? Object.keys(currentTfAnswers).length > 0
+    : selectedIdx !== undefined;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -163,7 +241,9 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             <Text style={styles.progressText}>
               Question {currentIndex + 1} of {totalQuestions}
             </Text>
-            <Text style={styles.categoryLabel}>{quiz.category}</Text>
+            <Text style={styles.categoryLabel}>
+              {isTF ? 'True / False Multi-Branch' : quiz.category}
+            </Text>
           </View>
         </View>
 
@@ -177,56 +257,130 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             <Text style={styles.questionText}>{currentQuestion.text}</Text>
           </View>
 
-          <View style={styles.optionsList}>
-            {currentQuestion.options.map((option, idx) => {
-              const isSelected = selectedIdx === idx;
-              const isCorrect = idx === currentQuestion.correctAnswer;
-              
-              let optionStyle = styles.optionCard;
-              let dotStyle = styles.optionDot;
+          {/* Render Mode: True/False Multi-Branch */}
+          {isTF ? (
+            <View style={styles.optionsList}>
+              <Text style={styles.tfInstructions}>
+                Select True or False for each clinical statement:
+              </Text>
+              {currentQuestion.options.map((option, bIdx) => {
+                const userVal = currentTfAnswers[bIdx];
+                const correctBranchVal = currentQuestion.branchAnswers?.[bIdx];
+                const isRevealed = showExplanation && correctBranchVal !== undefined;
 
-              if (hasAnswered) {
-                if (isSelected && isCorrect) {
-                  optionStyle = styles.optionCorrect;
-                  dotStyle = styles.optionDotCorrect;
-                } else if (isSelected && !isCorrect) {
-                  optionStyle = styles.optionWrong;
-                  dotStyle = styles.optionDotWrong;
-                } else if (!isSelected && isCorrect) {
-                  optionStyle = styles.optionRevealCorrect;
-                }
-              } else if (isSelected) {
-                optionStyle = styles.optionSelected;
-                dotStyle = styles.optionDotSelected;
-              }
-
-              return (
-                <Pressable
-                  key={idx}
-                  onPress={() => handleSelectOption(idx)}
-                  style={({ pressed }) => [
-                    optionStyle,
-                    pressed && styles.optionPressed,
-                  ]}
-                >
-                  <View style={dotStyle}>
-                    <Text style={styles.optionLetter}>
-                      {String.fromCharCode(65 + idx)}
+                return (
+                  <View key={bIdx} style={styles.tfBranchCard}>
+                    <Text style={styles.tfBranchTitle}>
+                      {String.fromCharCode(65 + bIdx)}. {option}
                     </Text>
-                  </View>
-                  <Text style={styles.optionText}>{option}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <View style={styles.tfButtonRow}>
+                      <Pressable
+                        onPress={() => handleSelectTfBranch(bIdx, 1)}
+                        style={({ pressed }) => [
+                          styles.tfPill,
+                          userVal === 1 && styles.tfPillSelected,
+                          isRevealed && correctBranchVal === 1 && styles.tfPillCorrect,
+                          isRevealed && userVal === 1 && correctBranchVal !== 1 && styles.tfPillWrong,
+                          pressed && styles.buttonPressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tfPillText,
+                            userVal === 1 && styles.tfPillTextSelected,
+                          ]}
+                        >
+                          True
+                        </Text>
+                      </Pressable>
 
-          {/* Explanation Sheet */}
+                      <Pressable
+                        onPress={() => handleSelectTfBranch(bIdx, 0)}
+                        style={({ pressed }) => [
+                          styles.tfPill,
+                          userVal === 0 && styles.tfPillSelected,
+                          isRevealed && correctBranchVal === 0 && styles.tfPillCorrect,
+                          isRevealed && userVal === 0 && correctBranchVal !== 0 && styles.tfPillWrong,
+                          pressed && styles.buttonPressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tfPillText,
+                            userVal === 0 && styles.tfPillTextSelected,
+                          ]}
+                        >
+                          False
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {!showExplanation && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowExplanation(true);
+                  }}
+                  style={styles.revealExplanationLink}
+                >
+                  <Text style={styles.revealExplanationText}>Check Explanations 💡</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            /* Render Mode: Multiple Choice Single Option */
+            <View style={styles.optionsList}>
+              {currentQuestion.options.map((option, idx) => {
+                const isSelected = selectedIdx === idx;
+                const isCorrect = idx === currentQuestion.correctAnswer;
+
+                let optionStyle = styles.optionCard;
+                let dotStyle = styles.optionDot;
+
+                if (hasAnswered) {
+                  if (isSelected && isCorrect) {
+                    optionStyle = styles.optionCorrect;
+                    dotStyle = styles.optionDotCorrect;
+                  } else if (isSelected && !isCorrect) {
+                    optionStyle = styles.optionWrong;
+                    dotStyle = styles.optionDotWrong;
+                  } else if (!isSelected && isCorrect) {
+                    optionStyle = styles.optionRevealCorrect;
+                  }
+                } else if (isSelected) {
+                  optionStyle = styles.optionSelected;
+                  dotStyle = styles.optionDotSelected;
+                }
+
+                return (
+                  <Pressable
+                    key={idx}
+                    onPress={() => handleSelectOption(idx)}
+                    style={({ pressed }) => [
+                      optionStyle,
+                      pressed && styles.optionPressed,
+                    ]}
+                  >
+                    <View style={dotStyle}>
+                      <Text style={styles.optionLetter}>
+                        {String.fromCharCode(65 + idx)}
+                      </Text>
+                    </View>
+                    <Text style={styles.optionText}>{option}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Clinical Explanation Card */}
           {showExplanation && (
             <View style={styles.explanationCard}>
               <Text style={styles.explanationTitle}>
-                {selectedIdx === currentQuestion.correctAnswer
-                  ? '✅ Correct Explanation'
-                  : 'ℹ️ Clinical Explanation'}
+                💡 Clinical Rationale & Key Takeaways
               </Text>
               <Text style={styles.explanationText}>
                 {currentQuestion.explanation}
@@ -234,7 +388,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             </View>
           )}
 
-          <View style={{ height: 100 }} />
+          <View style={{ height: 110 }} />
         </ScrollView>
 
         {/* Bottom Action Footer */}
@@ -460,6 +614,71 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '500',
   },
+  // True / False styles
+  tfInstructions: {
+    fontSize: 13,
+    color: Colors.secondary,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  tfBranchCard: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  tfBranchTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.onSurface,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  tfButtonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  tfPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  tfPillSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  tfPillCorrect: {
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
+  },
+  tfPillWrong: {
+    backgroundColor: Colors.error,
+    borderColor: Colors.error,
+  },
+  tfPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onSurface,
+  },
+  tfPillTextSelected: {
+    color: Colors.onPrimary,
+  },
+  revealExplanationLink: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    marginTop: 6,
+  },
+  revealExplanationText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
   explanationCard: {
     backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
@@ -515,11 +734,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   // Result screen styles
-  resultContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  resultScrollContent: {
     paddingHorizontal: 24,
+    paddingVertical: 32,
+    alignItems: 'center',
   },
   resultEmoji: {
     fontSize: 60,
@@ -545,7 +763,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   scoreBigText: {
     fontSize: 48,
@@ -569,6 +787,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: Colors.primary,
+  },
+  reviewMistakesButton: {
+    width: '100%',
+    backgroundColor: Colors.errorContainer,
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.error,
+  },
+  reviewMistakesText: {
+    color: Colors.error,
+    fontSize: 15,
+    fontWeight: '700',
   },
   retakeButton: {
     width: '100%',

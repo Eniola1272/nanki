@@ -1,36 +1,74 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Header } from '../components/Header';
 import { QuizCard } from '../components/QuizCard';
 import { DeckCard } from '../components/DeckCard';
-import { SAMPLE_QUIZZES, SAMPLE_DECKS } from '../lib/sample-data';
-import { Quiz, Deck } from '../types';
+import { StorageService } from '../lib/storage';
+import { Quiz, Deck, Profile } from '../types';
 
 interface DashboardScreenProps {
   onSelectQuiz: (quiz: Quiz) => void;
   onSelectDeck: (deck: Deck) => void;
+  onOpenProfile: () => void;
+  onOpenCreate: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onSelectQuiz,
   onSelectDeck,
+  onOpenProfile,
+  onOpenCreate,
 }) => {
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    const [qList, dList, prof] = await Promise.all([
+      StorageService.getQuizzes(),
+      StorageService.getDecks(),
+      StorageService.getProfile(),
+    ]);
+    setQuizzes(qList);
+    setDecks(dList);
+    setProfile(prof);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await loadData();
+    setRefreshing(false);
+  };
+
   const handleReviewBannerPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (SAMPLE_DECKS.length > 0) {
-      onSelectDeck(SAMPLE_DECKS[0]);
+    if (decks.length > 0) {
+      onSelectDeck(decks[0]);
     }
   };
 
   return (
     <View style={styles.screen}>
-      <Header streak={4} xp={820} />
+      <Header
+        streak={profile?.streak ?? 4}
+        xp={profile?.xp ?? 840}
+        onProfilePress={onOpenProfile}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
       >
         {/* Daily Review Hero Banner */}
         <Pressable
@@ -43,22 +81,22 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <View style={styles.bannerBadge}>
             <Text style={styles.bannerBadgeText}>SPACED REPETITION</Text>
           </View>
-          <Text style={styles.bannerTitle}>Daily Medical Review</Text>
+          <Text style={styles.bannerTitle}>Daily Medical Recall</Text>
           <Text style={styles.bannerSubtitle}>
-            6 cards due today to maintain your memory retention curve.
+            {decks[0]?.cards.length ?? 6} cards scheduled for today. Review now to solidify retention.
           </Text>
           <View style={styles.bannerButton}>
-            <Text style={styles.bannerButtonText}>Start Daily Review →</Text>
+            <Text style={styles.bannerButtonText}>Start Today's Review →</Text>
           </View>
         </Pressable>
 
         {/* Section: Medical Quizzes */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>High-Yield Quizzes</Text>
-          <Text style={styles.sectionSubtitle}>{SAMPLE_QUIZZES.length} available</Text>
+          <Text style={styles.sectionSubtitle}>{quizzes.length} available</Text>
         </View>
 
-        {SAMPLE_QUIZZES.map((quiz) => (
+        {quizzes.map((quiz) => (
           <QuizCard
             key={quiz.id}
             quiz={quiz}
@@ -69,10 +107,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* Section: Flashcard Decks */}
         <View style={[styles.sectionHeader, { marginTop: 16 }]}>
           <Text style={styles.sectionTitle}>Flashcard Decks</Text>
-          <Text style={styles.sectionSubtitle}>{SAMPLE_DECKS.length} decks</Text>
+          <Text style={styles.sectionSubtitle}>{decks.length} decks</Text>
         </View>
 
-        {SAMPLE_DECKS.map((deck) => (
+        {decks.map((deck) => (
           <DeckCard
             key={deck.id}
             deck={deck}
@@ -80,8 +118,22 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           />
         ))}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
+
+      {/* Floating Action Button for Quick Creation */}
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onOpenCreate();
+        }}
+        style={({ pressed }) => [
+          styles.fab,
+          pressed && styles.fabPressed,
+        ]}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </Pressable>
     </View>
   );
 };
@@ -165,5 +217,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.secondary,
     fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  fabPressed: {
+    transform: [{ scale: 0.9 }],
+  },
+  fabText: {
+    fontSize: 32,
+    color: '#FFFFFF',
+    fontWeight: '400',
+    lineHeight: 34,
   },
 });
