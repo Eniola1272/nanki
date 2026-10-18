@@ -4,11 +4,13 @@ export interface Question {
   id: string;
   text: string;
   type?: QuestionType;
+  timer?: string; // e.g. '30s', '45s', '60s'
   options: string[];
   correctAnswer: number;
   explanation: string;
   // For True/False branches:
   branchAnswers?: Record<number, number>; // index -> 1 (true), 0 (false)
+  correctTruthValues?: boolean[];
 }
 
 export interface Quiz {

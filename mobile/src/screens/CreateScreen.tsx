@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Quiz, Deck, Question, Flashcard } from '../types';
 import { StorageService } from '../lib/storage';
+import { BulkImportModal } from '../components/BulkImportModal';
 
 interface CreateScreenProps {
   onCreated: (type: 'quiz' | 'deck') => void;
@@ -19,6 +20,7 @@ interface CreateScreenProps {
 
 export const CreateScreen: React.FC<CreateScreenProps> = ({ onCreated }) => {
   const [createType, setCreateType] = useState<'quiz' | 'deck'>('quiz');
+  const [showBulkModal, setShowBulkModal] = useState(false);
 
   // Quiz form state
   const [quizTitle, setQuizTitle] = useState('');
@@ -37,6 +39,37 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onCreated }) => {
   const [cardBack, setCardBack] = useState('');
   const [cardNote, setCardNote] = useState('');
   const [addedCards, setAddedCards] = useState<Flashcard[]>([]);
+
+  const handleApplyBulk = (imported: Question[], replace: boolean) => {
+    if (replace) {
+      setAddedQuestions(imported);
+    } else {
+      setAddedQuestions((prev) => [...prev, ...imported]);
+    }
+    Alert.alert(
+      'Questions Imported',
+      `Successfully added ${imported.length} question(s) to your quiz draft.`
+    );
+  };
+
+  const handleRemoveQuestion = (indexToRemove: number) => {
+    Haptics.selectionAsync();
+    setAddedQuestions((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleClearAllQuestions = () => {
+    Alert.alert('Clear Draft', 'Are you sure you want to remove all drafted questions?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear All',
+        style: 'destructive',
+        onPress: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          setAddedQuestions([]);
+        },
+      },
+    ]);
+  };
 
   const handleAddQuestion = () => {
     if (!qText.trim() || qOptions.some((o) => !o.trim())) {
@@ -65,7 +98,7 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onCreated }) => {
       return;
     }
     if (addedQuestions.length === 0) {
-      Alert.alert('No Questions', 'Please add at least one question before saving.');
+      Alert.alert('No Questions', 'Please add or bulk-import at least one question before saving.');
       return;
     }
 
@@ -133,6 +166,7 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onCreated }) => {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.pageTitle}>Create Study Material</Text>
       <Text style={styles.pageSubtitle}>
@@ -192,10 +226,93 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onCreated }) => {
             style={styles.textInput}
           />
 
+          {/* Bulk Import Callout Banner */}
+          <View style={styles.bulkBanner}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.bulkBannerTitle}>⚡ Bulk Import System</Text>
+              <Text style={styles.bulkBannerDesc}>
+                Paste multiple MCQs, True/False branches, or format using AI.
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowBulkModal(true);
+              }}
+              style={styles.bulkBannerBtn}
+            >
+              <Text style={styles.bulkBannerBtnText}>Import</Text>
+            </Pressable>
+          </View>
+
+          {/* Drafted Questions List / Preview */}
+          {addedQuestions.length > 0 && (
+            <View style={styles.draftSection}>
+              <View style={styles.draftHeaderRow}>
+                <Text style={styles.draftHeaderTitle}>
+                  Draft Questions ({addedQuestions.length})
+                </Text>
+                <Pressable onPress={handleClearAllQuestions} hitSlop={8}>
+                  <Text style={styles.draftClearText}>Clear All</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.draftList}>
+                {addedQuestions.map((q, idx) => (
+                  <View key={q.id || idx} style={styles.draftItem}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <View style={styles.draftItemBadgeRow}>
+                        <Text style={styles.draftItemIndex}>#{idx + 1}</Text>
+                        <View
+                          style={[
+                            styles.typeBadge,
+                            q.type === 'true-false'
+                              ? styles.typeBadgeTf
+                              : styles.typeBadgeMcq,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.typeBadgeText,
+                              q.type === 'true-false'
+                                ? styles.typeBadgeTextTf
+                                : styles.typeBadgeTextMcq,
+                            ]}
+                          >
+                            {q.type === 'true-false' ? 'True / False' : 'MCQ'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.draftItemText} numberOfLines={2}>
+                        {q.text}
+                      </Text>
+                      <Text style={styles.draftItemSub}>
+                        {q.type === 'true-false'
+                          ? `${q.options.length} statements • Timer: ${q.timer || '120s'}`
+                          : `${q.options.length} options • Ans: ${String.fromCharCode(
+                              65 + q.correctAnswer
+                            )} • Timer: ${q.timer || '30s'}`}
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      onPress={() => handleRemoveQuestion(idx)}
+                      hitSlop={8}
+                      style={styles.draftRemoveBtn}
+                    >
+                      <Text style={styles.draftRemoveText}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           <View style={styles.divider} />
 
+          {/* Single Question Addition Form */}
           <Text style={styles.formSectionHeader}>
-            Add Question ({addedQuestions.length} added)
+            Add Single Question Manually
           </Text>
           <TextInput
             value={qText}
@@ -321,6 +438,13 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onCreated }) => {
         </View>
       )}
 
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        visible={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onApply={handleApplyBulk}
+      />
+
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -401,6 +525,130 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.onSurface,
     marginBottom: 12,
+  },
+  bulkBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.primary + '0E',
+    borderColor: Colors.primary + '30',
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 10,
+  },
+  bulkBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginBottom: 2,
+  },
+  bulkBannerDesc: {
+    fontSize: 11,
+    color: Colors.onSurface,
+    lineHeight: 15,
+  },
+  bulkBannerBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  bulkBannerBtnText: {
+    color: Colors.onPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  draftSection: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginVertical: 12,
+  },
+  draftHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  draftHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.onSurface,
+  },
+  draftClearText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.error,
+  },
+  draftList: {
+    gap: 8,
+  },
+  draftItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceCard,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  draftItemBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  draftItemIndex: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.secondary,
+  },
+  typeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  typeBadgeMcq: {
+    backgroundColor: Colors.primary + '18',
+  },
+  typeBadgeTf: {
+    backgroundColor: Colors.warning + '20',
+  },
+  typeBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  typeBadgeTextMcq: {
+    color: Colors.primary,
+  },
+  typeBadgeTextTf: {
+    color: Colors.warning,
+  },
+  draftItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.onSurface,
+  },
+  draftItemSub: {
+    fontSize: 10,
+    color: Colors.secondary,
+    marginTop: 3,
+  },
+  draftRemoveBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  draftRemoveText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.secondary,
   },
   divider: {
     height: 1,

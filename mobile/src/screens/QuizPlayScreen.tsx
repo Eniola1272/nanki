@@ -26,33 +26,61 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   const [isCompleted, setIsCompleted] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'mistakes'>('all');
 
-  // Pacing timer
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (!isCompleted) {
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isCompleted]);
-
-  const formatTimer = (totalSecs: number) => {
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  const currentQuestion = quiz.questions[currentIndex];
-  const totalQuestions = quiz.questions.length;
+  const questions = quiz.questions;
+  const currentQuestion = questions[currentIndex];
+  const totalQuestions = questions.length;
   const isTF = currentQuestion.type === 'true-false';
   const progressPercent = ((currentIndex + 1) / totalQuestions) * 100;
+
+  // Countdown timer per question (matching webapp)
+  const getInitialTimeForQuestion = (q: Question | undefined) => {
+    if (!q) return 30;
+    const parsed = parseInt(q.timer || '');
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    return q.type === 'true-false' ? 120 : 30;
+  };
+
+  const [timeLeft, setTimeLeft] = useState(() => getInitialTimeForQuestion(currentQuestion));
+  const [totalSecondsElapsed, setTotalSecondsElapsed] = useState(0);
+  const finishedRef = useRef(false);
+
+  // Total session stopwatch
+  useEffect(() => {
+    if (isCompleted) return;
+    const timer = setInterval(() => {
+      setTotalSecondsElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isCompleted]);
+
+  // Question countdown timer
+  useEffect(() => {
+    if (isCompleted || finishedRef.current) return;
+
+    if (timeLeft <= 0) {
+      // Time is up: Auto-advance like the webapp!
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      handleNext();
+      return;
+    }
+
+    if (timeLeft <= 5) {
+      // Subtle urgent tick haptic on low time
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const intervalId = setTimeout(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(intervalId);
+  }, [timeLeft, currentIndex, isCompleted]);
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Single choice selection
   const handleSelectOption = (optionIndex: number) => {
@@ -90,11 +118,15 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   };
 
   const handleNext = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (currentIndex < totalQuestions - 1) {
-      setCurrentIndex((prev) => prev + 1);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
       setShowExplanation(false);
+      // Reset countdown timer to next question's allotted time
+      setTimeLeft(getInitialTimeForQuestion(questions[nextIdx]));
     } else {
+      finishedRef.current = true;
       setIsCompleted(true);
       const score = calculateScore();
       StorageService.addXP(score.correct * 20);
@@ -145,7 +177,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   if (isCompleted) {
     const passed = score.percentage >= 70;
     const hasMistakes = score.incorrectIndices.length > 0;
-    const avgSecsPerQ = Math.round(elapsedSeconds / totalQuestions);
+    const avgSecsPerQ = Math.round(totalSecondsElapsed / totalQuestions);
 
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -164,12 +196,12 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
 
             <View style={styles.statsMetricsRow}>
               <View style={styles.metricPill}>
-                <Text style={styles.metricLabel}>Pacing</Text>
+                <Text style={styles.metricLabel}>Avg. Pace</Text>
                 <Text style={styles.metricVal}>{avgSecsPerQ}s / question</Text>
               </View>
               <View style={styles.metricPill}>
                 <Text style={styles.metricLabel}>Total Time</Text>
-                <Text style={styles.metricVal}>{formatTimer(elapsedSeconds)}</Text>
+                <Text style={styles.metricVal}>{formatCountdown(totalSecondsElapsed)}</Text>
               </View>
             </View>
 
@@ -184,7 +216,9 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setReviewFilter('mistakes');
-                setCurrentIndex(score.incorrectIndices[0]);
+                const firstWrong = score.incorrectIndices[0];
+                setCurrentIndex(firstWrong);
+                setTimeLeft(getInitialTimeForQuestion(questions[firstWrong]));
                 setShowExplanation(true);
                 setIsCompleted(false);
               }}
@@ -206,7 +240,9 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
               setSelectedAnswers({});
               setTfAnswers({});
               setShowExplanation(false);
-              setElapsedSeconds(0);
+              setTimeLeft(getInitialTimeForQuestion(questions[0]));
+              setTotalSecondsElapsed(0);
+              finishedRef.current = false;
               setIsCompleted(false);
             }}
             style={({ pressed }) => [
@@ -240,10 +276,12 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
     ? Object.keys(currentTfAnswers).length > 0
     : selectedIdx !== undefined;
 
+  const isTimeCritical = timeLeft <= 5;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Navigation Bar with Timer */}
+        {/* Navigation Bar with Live Countdown Timer */}
         <View style={styles.navBar}>
           <Pressable
             onPress={() => {
@@ -255,9 +293,21 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             <Text style={styles.closeText}>✕</Text>
           </Pressable>
 
-          {/* Live Timer Pill */}
-          <View style={styles.timerPill}>
-            <Text style={styles.timerText}>⏱️ {formatTimer(elapsedSeconds)}</Text>
+          {/* Countdown Timer Pill (Red & urgent when <= 5 seconds) */}
+          <View
+            style={[
+              styles.timerPill,
+              isTimeCritical && styles.timerPillCritical,
+            ]}
+          >
+            <Text
+              style={[
+                styles.timerText,
+                isTimeCritical && styles.timerTextCritical,
+              ]}
+            >
+              ⏱️ {formatCountdown(timeLeft)}
+            </Text>
           </View>
 
           <Pressable onPress={toggleFlag} style={styles.flagButton}>
@@ -478,17 +528,24 @@ const styles = StyleSheet.create({
     color: Colors.onSurface,
   },
   timerPill: {
-    backgroundColor: Colors.surfaceCard,
-    paddingHorizontal: 12,
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  timerPillCritical: {
+    backgroundColor: Colors.errorContainer,
+    borderColor: Colors.error,
   },
   timerText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: Colors.onSurface,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  timerTextCritical: {
+    color: Colors.error,
   },
   flagButton: {
     width: 36,
