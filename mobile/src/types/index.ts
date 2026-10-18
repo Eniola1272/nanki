@@ -56,3 +56,15 @@ export interface Profile {
   xp: number;
   plan: 'FREE' | 'PRO' | 'SCHOLAR';
 }
+
+export interface QuizAttempt {
+  id: string;
+  quizId: string;
+  quizTitle: string;
+  category: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  timeSpentSeconds: number;
+  completedAt: string;
+}

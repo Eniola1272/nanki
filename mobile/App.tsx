@@ -19,10 +19,11 @@ import { FlashcardScreen } from './src/screens/FlashcardScreen';
 import { DeckCardsScreen } from './src/screens/DeckCardsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { CreateScreen } from './src/screens/CreateScreen';
+import { DiscoverScreen } from './src/screens/DiscoverScreen';
 import { StorageService } from './src/lib/storage';
 import { Quiz, Deck } from './src/types';
 
-type Tab = 'dashboard' | 'quizzes' | 'decks' | 'profile';
+type Tab = 'dashboard' | 'quizzes' | 'decks' | 'discover' | 'profile';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -67,6 +68,11 @@ export default function App() {
           quiz={activeQuiz}
           onExit={() => {
             setActiveQuiz(null);
+            loadContent();
+          }}
+          onStartDeck={(deck) => {
+            setActiveQuiz(null);
+            setActiveDeck(deck);
             loadContent();
           }}
         />
@@ -348,8 +354,17 @@ export default function App() {
             </ScrollView>
           </View>
         )}
+ 
+        {/* TAB 4: DISCOVER */}
+        {activeTab === 'discover' && (
+          <DiscoverScreen
+            onSelectQuiz={(quiz) => setActiveQuiz(quiz)}
+            onSelectDeck={(deck) => setInspectingDeck(deck)}
+            onForked={() => loadContent()}
+          />
+        )}
 
-        {/* TAB 4: PROFILE */}
+        {/* TAB 5: PROFILE */}
         {activeTab === 'profile' && <ProfileScreen />}
       </View>
 
@@ -397,6 +412,21 @@ export default function App() {
           </Text>
           <Text style={[styles.navLabel, activeTab === 'decks' && styles.navLabelActive]}>
             Decks
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => handleTabChange('discover')}
+          style={({ pressed }) => [
+            styles.navItem,
+            pressed && styles.navItemPressed,
+          ]}
+        >
+          <Text style={[styles.navIcon, activeTab === 'discover' && styles.navIconActive]}>
+            🌐
+          </Text>
+          <Text style={[styles.navLabel, activeTab === 'discover' && styles.navLabelActive]}>
+            Discover
           </Text>
         </Pressable>
 

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
-import { Profile } from '../types';
+import { Profile, QuizAttempt } from '../types';
 import { StorageService, UserSettings } from '../lib/storage';
 import { supabase } from '../lib/supabase';
 
@@ -23,6 +23,7 @@ interface ProfileScreenProps {
 export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [emailInput, setEmailInput] = useState('');
@@ -34,11 +35,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
   }, []);
 
   const loadData = async () => {
-    const prof = await StorageService.getProfile();
-    const sett = await StorageService.getSettings();
+    const [prof, sett, atts] = await Promise.all([
+      StorageService.getProfile(),
+      StorageService.getSettings(),
+      StorageService.getAttempts(),
+    ]);
     setProfile(prof);
     setSettings(sett);
+    setAttempts(atts);
   };
+
+  const categoryStats = React.useMemo(() => {
+    const stats: Record<string, { correct: number; total: number }> = {};
+    attempts.forEach((a) => {
+      const cat = a.category || 'General';
+      if (!stats[cat]) stats[cat] = { correct: 0, total: 0 };
+      stats[cat].correct += a.score;
+      stats[cat].total += a.totalQuestions;
+    });
+
+    const list = Object.entries(stats).map(([category, { correct, total }]) => {
+      const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+      return { category, correct, total, percentage };
+    });
+
+    list.sort((a, b) => a.percentage - b.percentage); // lowest percentage first
+    return list;
+  }, [attempts]);
+
+  const weakestCategory = categoryStats.length > 0 ? categoryStats[0] : null;
 
   const handleToggleHaptics = async (value: boolean) => {
     if (value) {
@@ -199,6 +224,101 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
           Unlimited question banks, full SM-2 spaced repetition, and cloud sync across all your devices.
         </Text>
       </View>
+
+      {/* Clinical Specialty Mastery Section */}
+      <View style={styles.masteryCard}>
+        <Text style={styles.sectionTitle}>Specialty Mastery & Analytics</Text>
+        <Text style={styles.masterySubtitle}>
+          Weighted accuracy across your question sessions.
+        </Text>
+
+        {weakestCategory && weakestCategory.percentage < 70 ? (
+          <View style={styles.weakestAlert}>
+            <Text style={styles.weakestAlertTitle}>
+              ⚠️ Recommended Focus: {weakestCategory.category}
+            </Text>
+            <Text style={styles.weakestAlertDesc}>
+              Current accuracy is {weakestCategory.percentage}%. Reinforce missed concepts to raise mastery.
+            </Text>
+          </View>
+        ) : null}
+
+        {categoryStats.length > 0 ? (
+          <View style={styles.categoryList}>
+            {categoryStats.map((item) => (
+              <View key={item.category} style={styles.categoryRow}>
+                <View style={styles.categoryInfoRow}>
+                  <Text style={styles.categoryName}>{item.category}</Text>
+                  <Text style={styles.categoryPercentage}>{item.percentage}%</Text>
+                </View>
+                <View style={styles.categoryTrack}>
+                  <View
+                    style={[
+                      styles.categoryFill,
+                      {
+                        width: `${item.percentage}%`,
+                        backgroundColor:
+                          item.percentage >= 75
+                            ? Colors.success
+                            : item.percentage >= 50
+                            ? Colors.warning
+                            : Colors.error,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.noAttemptsText}>
+            Complete your first quiz to generate clinical subject mastery benchmarks.
+          </Text>
+        )}
+      </View>
+
+      {/* Quiz History Log */}
+      {attempts.length > 0 && (
+        <View style={styles.historyCardSection}>
+          <Text style={styles.sectionTitle}>Recent Quiz Attempts</Text>
+          <View style={styles.historyList}>
+            {attempts.slice(0, 5).map((att) => {
+              const passed = att.percentage >= 70;
+              const dateStr = new Date(att.completedAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              });
+              return (
+                <View key={att.id} style={styles.historyItemCard}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.historyTitle} numberOfLines={1}>
+                      {att.quizTitle}
+                    </Text>
+                    <Text style={styles.historySub}>
+                      {att.category} • {att.score}/{att.totalQuestions} questions • {dateStr}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.historyPill,
+                      passed ? styles.historyPillPassed : styles.historyPillFailed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.historyPillText,
+                        passed ? styles.historyPillTextPassed : styles.historyPillTextFailed,
+                      ]}
+                    >
+                      {att.percentage}%
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       {/* Study & App Preferences */}
       <View style={styles.settingsSection}>
@@ -628,5 +748,128 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 13,
     fontWeight: '700',
+  },
+  masteryCard: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  masterySubtitle: {
+    fontSize: 12,
+    color: Colors.secondary,
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  weakestAlert: {
+    backgroundColor: Colors.warning + '18',
+    borderColor: Colors.warning + '45',
+    borderWidth: 1.2,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+  },
+  weakestAlertTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.warning,
+    marginBottom: 2,
+  },
+  weakestAlertDesc: {
+    fontSize: 11,
+    color: Colors.onSurface,
+    lineHeight: 15,
+  },
+  categoryList: {
+    gap: 12,
+  },
+  categoryRow: {
+    gap: 6,
+  },
+  categoryInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onSurface,
+  },
+  categoryPercentage: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.secondary,
+  },
+  categoryTrack: {
+    height: 8,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  categoryFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  noAttemptsText: {
+    fontSize: 12,
+    color: Colors.secondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  historyCardSection: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  historyList: {
+    gap: 10,
+    marginTop: 8,
+  },
+  historyItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  historyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onSurface,
+    marginBottom: 2,
+  },
+  historySub: {
+    fontSize: 11,
+    color: Colors.secondary,
+  },
+  historyPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  historyPillPassed: {
+    backgroundColor: Colors.success + '20',
+  },
+  historyPillFailed: {
+    backgroundColor: Colors.error + '20',
+  },
+  historyPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  historyPillTextPassed: {
+    color: Colors.success,
+  },
+  historyPillTextFailed: {
+    color: Colors.error,
   },
 });

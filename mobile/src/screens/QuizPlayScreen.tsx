@@ -9,15 +9,22 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
-import { Quiz, Question } from '../types';
+import { Quiz, Question, Deck } from '../types';
 import { StorageService } from '../lib/storage';
+import { generateMistakeFlashcards } from '../lib/mistakes';
+import { MistakeFlashcardsModal } from '../components/MistakeFlashcardsModal';
 
 interface QuizPlayScreenProps {
   quiz: Quiz;
   onExit: () => void;
+  onStartDeck?: (deck: Deck) => void;
 }
 
-export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) => {
+export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
+  quiz,
+  onExit,
+  onStartDeck,
+}) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [tfAnswers, setTfAnswers] = useState<Record<number, Record<number, number | null>>>({});
@@ -25,6 +32,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   const [showExplanation, setShowExplanation] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'mistakes'>('all');
+  const [showMistakeModal, setShowMistakeModal] = useState(false);
 
   const questions = quiz.questions;
   const currentQuestion = questions[currentIndex];
@@ -130,6 +138,17 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
       setIsCompleted(true);
       const score = calculateScore();
       StorageService.addXP(score.correct * 20);
+      StorageService.saveAttempt({
+        id: `att_${Date.now()}`,
+        quizId: quiz.id,
+        quizTitle: quiz.title,
+        category: quiz.category,
+        score: score.correct,
+        totalQuestions: score.total,
+        percentage: score.percentage,
+        timeSpentSeconds: totalSecondsElapsed,
+        completedAt: new Date().toISOString(),
+      });
     }
   };
 
@@ -172,6 +191,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
   };
 
   const score = calculateScore();
+  const mistakeCards = generateMistakeFlashcards(quiz, selectedAnswers, tfAnswers);
 
   // Completion / Results View
   if (isCompleted) {
@@ -209,6 +229,24 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
               <Text style={styles.xpAwardText}>⚡ +{score.correct * 20} XP Earned</Text>
             </View>
           </View>
+
+          {/* Convert Mistakes to Flashcard Deck Button */}
+          {mistakeCards.length > 0 && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowMistakeModal(true);
+              }}
+              style={({ pressed }) => [
+                styles.convertMistakesButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.convertMistakesText}>
+                ⚡ Create Flashcards from Mistakes ({mistakeCards.length})
+              </Text>
+            </Pressable>
+          )}
 
           {/* Review Mistakes Button */}
           {hasMistakes && (
@@ -266,6 +304,20 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({ quiz, onExit }) 
             <Text style={styles.dashboardButtonText}>Back to Dashboard</Text>
           </Pressable>
         </ScrollView>
+
+        <MistakeFlashcardsModal
+          visible={showMistakeModal}
+          quiz={quiz}
+          initialCards={mistakeCards}
+          onClose={() => setShowMistakeModal(false)}
+          onSaved={(deck) => {
+            if (onStartDeck) {
+              onStartDeck(deck);
+            } else {
+              onExit();
+            }
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -912,6 +964,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: Colors.primary,
+  },
+  convertMistakesButton: {
+    width: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  convertMistakesText: {
+    color: Colors.onPrimary,
+    fontSize: 15,
+    fontWeight: '800',
   },
   reviewMistakesButton: {
     width: '100%',

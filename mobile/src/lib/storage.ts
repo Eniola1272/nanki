@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Profile, Quiz, Deck, ReviewState } from '../types';
+import { Profile, Quiz, Deck, Flashcard, ReviewState, QuizAttempt } from '../types';
 import { SAMPLE_QUIZZES, SAMPLE_DECKS } from './sample-data';
 import { supabase } from './supabase';
 
@@ -180,6 +180,73 @@ export const StorageService = {
       await AsyncStorage.setItem(KEYS.REVIEWS, JSON.stringify(states));
     } catch (e) {
       console.error('Failed to save review state:', e);
+    }
+  },
+
+  // Quiz Attempts & Progress Analytics
+  async getAttempts(): Promise<QuizAttempt[]> {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.ATTEMPTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async saveAttempt(attempt: QuizAttempt): Promise<void> {
+    try {
+      const attempts = await this.getAttempts();
+      attempts.unshift(attempt);
+      // Keep up to 50 recent attempts
+      const trimmed = attempts.slice(0, 50);
+      await AsyncStorage.setItem(KEYS.ATTEMPTS, JSON.stringify(trimmed));
+
+      // Award XP based on accuracy
+      const xpEarned = 25 + Math.round((attempt.percentage / 100) * 50);
+      await this.addXP(xpEarned);
+    } catch (e) {
+      console.error('Failed to save attempt:', e);
+    }
+  },
+
+  // Daily Review Queue across all decks
+  async getDailyReviewCards(): Promise<{
+    dueCards: Flashcard[];
+    totalCards: number;
+    dueCount: number;
+    newCount: number;
+  }> {
+    try {
+      const decks = await this.getDecks();
+      const allCards = decks.flatMap((d) => d.cards);
+      const reviews = await this.getReviewStates();
+      const now = new Date();
+
+      const dueCards: Flashcard[] = [];
+      let newCount = 0;
+
+      for (const card of allCards) {
+        const review = reviews[card.id];
+        if (!review) {
+          // Unreviewed/new card
+          newCount++;
+          dueCards.push(card);
+        } else {
+          const dueDate = new Date(review.dueDate);
+          if (dueDate <= now) {
+            dueCards.push(card);
+          }
+        }
+      }
+
+      return {
+        dueCards,
+        totalCards: allCards.length,
+        dueCount: dueCards.length,
+        newCount,
+      };
+    } catch {
+      return { dueCards: [], totalCards: 0, dueCount: 0, newCount: 0 };
     }
   },
 };
