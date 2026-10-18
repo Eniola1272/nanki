@@ -1,32 +1,46 @@
 {
   "expo": {
-    "name": "Nanki",
+    "name": "Nanki — Medical Study & Quizzes",
     "slug": "nanki",
     "version": "1.0.0",
+    "description": "High-yield medical question banks, clinical review MCQs, and spaced repetition flashcards for medical students and healthcare professionals.",
     "scheme": "nanki",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
     "splash": {
-      "backgroundColor": "#F4F3F0",
-      "resizeMode": "contain"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#562788"
     },
     "ios": {
       "bundleIdentifier": "com.nanki.app",
-      "supportsTablet": true
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.nanki.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#674099",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#562788"
       },
+      "permissions": [
+        "android.permission.VIBRATE",
+        "android.permission.INTERNET"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-haptics",
+      "expo-clipboard"
+    ]
   }
 }
