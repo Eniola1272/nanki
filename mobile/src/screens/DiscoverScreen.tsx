@@ -11,6 +11,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Quiz, Deck } from '../types';
+import { DownloadButton } from '../components/OfflineControls';
 import { StorageService } from '../lib/storage';
 import { COMMUNITY_ITEMS, CommunityItem } from '../lib/community-data';
 
@@ -253,6 +254,7 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
                   </Text>
                 </View>
 
+                <DownloadButton kind={item.kind} item={item.content} />
                 {/* Actions */}
                 <View style={styles.cardActionsRow}>
                   <Pressable

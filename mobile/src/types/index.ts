@@ -41,6 +41,7 @@ export interface Deck {
 export type Rating = 'again' | 'hard' | 'good' | 'easy';
 
 export interface ReviewState {
+  deckId?: string;
   cardId: string;
   reps: number;
   interval: number; // in days
@@ -58,6 +59,9 @@ export interface Profile {
 }
 
 export interface QuizAttempt {
+  quizSnapshot?: Quiz;
+  answers?: Record<number, number>;
+  branchAnswers?: Record<number, Record<number, number | null>>;
   id: string;
   quizId: string;
   quizTitle: string;

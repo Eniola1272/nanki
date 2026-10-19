@@ -7,9 +7,9 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
@@ -33,6 +33,8 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
   onClose,
   onApply,
 }) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? 24 : 0);
   const [formatMode, setFormatMode] = useState<'mcq' | 'true-false'>('mcq');
   const [rawText, setRawText] = useState('');
   const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.modalRoot}>
+      <View style={[styles.modalRoot, { paddingTop: topInset }]}>
         {/* Top Header */}
         <View style={styles.header}>
           <View style={styles.headerTitleContainer}>
@@ -257,7 +259,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         </ScrollView>
 
         {/* Footer Actions */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) + 6 }]}>
           <Pressable
             onPress={() => handleApply(false)}
             disabled={parsedQuestions.length === 0}
@@ -298,7 +300,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
             </Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };

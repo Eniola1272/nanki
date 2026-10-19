@@ -5,11 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
+  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Quiz, Question, Deck } from '../types';
+import { newEventId } from '../lib/offline';
 import { StorageService } from '../lib/storage';
 import { generateMistakeFlashcards } from '../lib/mistakes';
 import { MistakeFlashcardsModal } from '../components/MistakeFlashcardsModal';
@@ -26,13 +30,18 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
   onExit,
   onStartDeck,
 }) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [tfAnswers, setTfAnswers] = useState<Record<number, Record<number, number | null>>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [reviewFilter, setReviewFilter] = useState<'all' | 'mistakes'>('all');
+  const [, setReviewFilter] = useState<'all' | 'mistakes'>('all');
   const [showMistakeModal, setShowMistakeModal] = useState(false);
 
   const questions = quiz.questions;
@@ -52,6 +61,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
   const [timeLeft, setTimeLeft] = useState(() => getInitialTimeForQuestion(currentQuestion));
   const [totalSecondsElapsed, setTotalSecondsElapsed] = useState(0);
   const finishedRef = useRef(false);
+  const attemptId = useRef(newEventId());
 
   // Total session stopwatch
   useEffect(() => {
@@ -126,7 +136,8 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (finishedRef.current) return;
     if (currentIndex < totalQuestions - 1) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const nextIdx = currentIndex + 1;
@@ -136,11 +147,11 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
       setTimeLeft(getInitialTimeForQuestion(questions[nextIdx]));
     } else {
       finishedRef.current = true;
-      setIsCompleted(true);
       const score = calculateScore();
-      StorageService.addXP(score.correct * 20);
-      StorageService.saveAttempt({
-        id: `att_${Date.now()}`,
+      try {
+      await StorageService.saveAttempt({
+        id: attemptId.current,
+        quizSnapshot: quiz, answers: selectedAnswers, branchAnswers: tfAnswers,
         quizId: quiz.id,
         quizTitle: quiz.title,
         category: quiz.category,
@@ -150,6 +161,8 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
         timeSpentSeconds: totalSecondsElapsed,
         completedAt: new Date().toISOString(),
       });
+      setIsCompleted(true);
+      } catch { finishedRef.current = false; Alert.alert("Result not saved", "Free device storage and tap Finish again. Keep this quiz open to preserve your answers."); }
     }
   };
 
@@ -201,8 +214,8 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
     const avgSecsPerQ = Math.round(totalSecondsElapsed / totalQuestions);
 
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.resultScrollContent}>
+      <View style={[styles.safeArea, { paddingTop: topInset, paddingBottom: insets.bottom }]}>
+        <ScrollView contentContainerStyle={[styles.resultScrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}>
           <Text style={styles.resultEmoji}>{passed ? '🎉' : '📚'}</Text>
           <Text style={styles.resultTitle}>
             {passed ? 'Quiz Mastered!' : 'Quiz Completed!'}
@@ -331,7 +344,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
             }
           }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -344,7 +357,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
   const isTimeCritical = timeLeft <= 5;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <View style={styles.container}>
         {/* Navigation Bar with Live Countdown Timer */}
         <View style={styles.navBar}>
@@ -538,11 +551,11 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
             </View>
           )}
 
-          <View style={{ height: 110 }} />
+          <View style={{ height: Math.max(insets.bottom, 16) + 90 }} />
         </ScrollView>
 
         {/* Bottom Action Footer */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
           <Pressable
             disabled={!hasAnswered}
             onPress={handleNext}
@@ -558,7 +571,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
           </Pressable>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

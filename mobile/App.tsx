@@ -4,13 +4,14 @@ import {
   View,
   Text,
   Pressable,
-  SafeAreaView,
   Platform,
   StatusBar as RNStatusBar,
   TextInput,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Colors } from './src/theme/colors';
 import { DashboardScreen } from './src/screens/DashboardScreen';
@@ -20,12 +21,28 @@ import { DeckCardsScreen } from './src/screens/DeckCardsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { CreateScreen } from './src/screens/CreateScreen';
 import { DiscoverScreen } from './src/screens/DiscoverScreen';
+import { OfflineStatus, DownloadButton, useOfflineSync } from './src/components/OfflineControls';
 import { StorageService } from './src/lib/storage';
 import { Quiz, Deck } from './src/types';
 
 type Tab = 'dashboard' | 'quizzes' | 'decks' | 'discover' | 'profile';
 
 export default function App() {
+  const offline = useOfflineSync();
+  return (
+    <SafeAreaProvider>
+      <MobileApp key={offline.owner} offline={offline} />
+    </SafeAreaProvider>
+  );
+}
+
+function MobileApp({ offline }: { offline: ReturnType<typeof useOfflineSync> }) {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0
+  );
+  const bottomInset = insets.bottom;
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [activeDeck, setActiveDeck] = useState<Deck | null>(null);
@@ -37,18 +54,24 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  useEffect(() => {
-    loadContent();
-  }, [activeTab, isCreating]);
-
   const loadContent = async () => {
+    try {
     const [qList, dList] = await Promise.all([
       StorageService.getQuizzes(),
       StorageService.getDecks(),
     ]);
     setQuizzes(qList);
     setDecks(dList);
+    } catch { Alert.alert("Offline library unavailable", "Could not read device storage. Your saved files have not been cleared."); }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([StorageService.getQuizzes(), StorageService.getDecks()]).then(([q, d]) => {
+      if (!cancelled) { setQuizzes(q); setDecks(d); }
+    }).catch(() => { if (!cancelled) Alert.alert('Offline library unavailable', 'Could not read device storage. Your saved files have not been cleared.'); });
+    return () => { cancelled = true; };
+  }, [activeTab, isCreating, offline.message, offline.downloads]);
 
   const handleTabChange = (tab: Tab) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -99,7 +122,7 @@ export default function App() {
   // If currently browsing/editing cards inside a deck:
   if (inspectingDeck) {
     return (
-      <SafeAreaView style={styles.appContainer}>
+      <View style={[styles.appContainer, { paddingTop: topInset, paddingBottom: bottomInset }]}>
         <StatusBar style="dark" />
         <DeckCardsScreen
           deck={inspectingDeck}
@@ -113,14 +136,14 @@ export default function App() {
             loadContent();
           }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   // If currently in creation mode:
   if (isCreating) {
     return (
-      <SafeAreaView style={styles.appContainer}>
+      <View style={[styles.appContainer, { paddingTop: topInset, paddingBottom: bottomInset }]}>
         <StatusBar style="dark" />
         <View style={styles.createHeader}>
           <Pressable
@@ -138,7 +161,7 @@ export default function App() {
             loadContent();
           }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -160,9 +183,10 @@ export default function App() {
   });
 
   return (
-    <SafeAreaView style={styles.appContainer}>
+    <View style={[styles.appContainer, { paddingTop: topInset }]}>
       <StatusBar style="dark" />
 
+      <OfflineStatus status={offline} />
       <View style={styles.mainView}>
         {/* TAB 1: DASHBOARD */}
         {activeTab === 'dashboard' && (
@@ -254,6 +278,7 @@ export default function App() {
                       <Text style={styles.categoryBadgeText}>{quiz.category}</Text>
                     </View>
                     <Text style={styles.itemTitle}>{quiz.title}</Text>
+                    <DownloadButton kind="quiz" item={quiz} />
                     <Text style={styles.itemSubtitle}>
                       {quiz.questions.length} Questions ·{' '}
                       {quiz.masteredPercentage ?? 0}% Mastered
@@ -345,6 +370,7 @@ export default function App() {
                       <Text style={styles.categoryBadgeText}>{deck.category}</Text>
                     </View>
                     <Text style={styles.itemTitle}>{deck.title}</Text>
+                    <DownloadButton kind="deck" item={deck} />
                     <Text style={styles.itemSubtitle}>
                       {deck.cards.length} Flashcards · Tap to browse cards →
                     </Text>
@@ -369,7 +395,14 @@ export default function App() {
       </View>
 
       {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
+      <View
+        style={[
+          styles.bottomNav,
+          {
+            paddingBottom: bottomInset > 0 ? bottomInset + 8 : (Platform.OS === 'ios' ? 18 : 12),
+          },
+        ]}
+      >
         <Pressable
           onPress={() => handleTabChange('dashboard')}
           style={({ pressed }) => [
@@ -445,7 +478,7 @@ export default function App() {
           </Text>
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -453,7 +486,6 @@ const styles = StyleSheet.create({
   appContainer: {
     flex: 1,
     backgroundColor: Colors.surface,
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   mainView: {
     flex: 1,
@@ -595,8 +627,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceCard,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 12,
+    paddingTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.04,

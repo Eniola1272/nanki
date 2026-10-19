@@ -13,6 +13,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Profile, QuizAttempt } from '../types';
+import { OfflineService } from '../lib/offline';
 import { StorageService, UserSettings } from '../lib/storage';
 import { supabase } from '../lib/supabase';
 
@@ -100,9 +101,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
         });
         if (error) throw error;
         Alert.alert('Account Created', 'Check your email to confirm your account.');
-        if (data.user && profile) {
+        if (data.session && data.user && profile) {
+          await OfflineService.setAccount(data.user.id);
+          const accountProfile = await StorageService.getProfile();
           const updatedProfile = {
-            ...profile,
+            ...accountProfile,
             id: data.user.id,
             email: data.user.email || emailInput,
             name: emailInput.split('@')[0],
@@ -118,8 +121,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
         if (error) throw error;
         Alert.alert('Welcome Back', 'Signed in successfully.');
         if (data.user && profile) {
+          await OfflineService.setAccount(data.user.id);
+          const accountProfile = await StorageService.getProfile();
           const updatedProfile = {
-            ...profile,
+            ...accountProfile,
             id: data.user.id,
             email: data.user.email || emailInput,
             name: data.user.user_metadata?.full_name || emailInput.split('@')[0],
@@ -131,8 +136,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
       setIsAuthModalVisible(false);
       setEmailInput('');
       setPasswordInput('');
-    } catch (e: any) {
-      Alert.alert('Authentication Error', e.message || 'Failed to authenticate');
+    } catch (e: unknown) {
+      Alert.alert('Authentication Error', e instanceof Error ? e.message : 'Failed to authenticate');
     } finally {
       setAuthLoading(false);
     }
@@ -146,13 +151,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await supabase.auth.signOut();
+          const { error } = await supabase.auth.signOut();
+          if (error) { Alert.alert('Could not sign out', 'Please reconnect and try again.'); return; }
+          await OfflineService.setAccount('guest');
           const defaultProf = {
             id: 'guest-local-user',
             name: 'Guest Learner',
             email: 'guest@nanki.app',
-            streak: 1,
-            xp: 120,
+            streak: 0,
+            xp: 0,
             plan: 'FREE' as const,
           };
           setProfile(defaultProf);

@@ -4,9 +4,12 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   Animated,
+  Platform,
+  StatusBar as RNStatusBar,
+  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Deck, Rating } from '../types';
@@ -19,11 +22,17 @@ interface FlashcardScreenProps {
 }
 
 export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
 
-  const flipAnimation = useRef(new Animated.Value(0)).current;
+  const saving = useRef(false);
+  const [flipAnimation] = useState(() => new Animated.Value(0));
 
   const totalCards = deck.cards.length;
   const currentCard = deck.cards[currentIndex];
@@ -49,8 +58,13 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
   };
 
   const handleRate = async (rating: Rating) => {
+    if (saving.current || !currentCard) return;
+    saving.current = true;
+    try {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const updatedState = advanceSM2(undefined, rating);
+    const states = await StorageService.getReviewStates();
+    const updatedState = advanceSM2(states[`${deck.id}:${currentCard.id}`] ?? states[currentCard.id], rating);
+    updatedState.deckId = deck.id;
     if (currentCard) {
       updatedState.cardId = currentCard.id;
       await StorageService.saveReviewState(updatedState);
@@ -66,7 +80,9 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
     }).start(() => {
       setIsFlipped(false);
       setCurrentIndex((prev) => prev + 1);
+      saving.current = false;
     });
+    } catch { saving.current = false; Alert.alert("Review not saved", "Free device storage and try again. Your card has not advanced."); }
   };
 
   // 3D rotation interpolation
@@ -90,7 +106,7 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
 
   if (isFinished) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <View style={styles.resultContainer}>
           <Text style={styles.resultEmoji}>🏆</Text>
           <Text style={styles.resultTitle}>Deck Completed!</Text>
@@ -132,12 +148,12 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
             <Text style={styles.exitButtonText}>Back to Dashboard</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <View style={styles.container}>
         {/* Navigation Bar */}
         <View style={styles.navBar}>
@@ -222,7 +238,7 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
         </View>
 
         {/* Rating Controls (Shown when card is flipped) */}
-        <View style={styles.controlsArea}>
+        <View style={[styles.controlsArea, { paddingBottom: Math.max(insets.bottom, 20) + 8 }]}>
           {!isFlipped ? (
             <Pressable
               onPress={handleFlip}
@@ -286,7 +302,7 @@ export const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onExit }
           )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

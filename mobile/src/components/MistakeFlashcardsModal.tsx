@@ -7,10 +7,10 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  SafeAreaView,
   Platform,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../theme/colors';
 import { Quiz, Deck, Flashcard } from '../types';
@@ -31,6 +31,8 @@ export const MistakeFlashcardsModal: React.FC<MistakeFlashcardsModalProps> = ({
   onClose,
   onSaved,
 }) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? 24 : 0);
   const [deckTitle, setDeckTitle] = useState(`${quiz.title} — Mistakes`);
   const [cards, setCards] = useState<Flashcard[]>(initialCards);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
@@ -100,7 +102,7 @@ export const MistakeFlashcardsModal: React.FC<MistakeFlashcardsModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.modalRoot}>
+      <View style={[styles.modalRoot, { paddingTop: topInset }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -201,7 +203,7 @@ export const MistakeFlashcardsModal: React.FC<MistakeFlashcardsModalProps> = ({
         </ScrollView>
 
         {/* Footer Actions */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) + 6 }]}>
           <Pressable
             onPress={handleSaveDeck}
             disabled={saving || selectedIds.size === 0}
@@ -219,7 +221,7 @@ export const MistakeFlashcardsModal: React.FC<MistakeFlashcardsModalProps> = ({
             </Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };
