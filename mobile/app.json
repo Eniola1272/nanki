@@ -38,9 +38,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-haptics",
-      "expo-clipboard"
-    ]
+    "extra": {
+      "eas": {
+        "projectId": "abb9cf7e-c777-4436-922c-ad6439f74e49"
+      }
+    }
   }
 }

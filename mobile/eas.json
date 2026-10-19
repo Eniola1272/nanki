@@ -10,6 +10,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
+      },
       "android": {
         "buildType": "apk"
       },
@@ -19,24 +22,11 @@
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
+      },
       "android": {
         "buildType": "app-bundle"
-      },
-      "ios": {
-        "enterpriseProvisioning": false
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./google-service-account.json",
-        "track": "internal"
-      },
-      "ios": {
-        "appleId": "apple-dev@nanki.app",
-        "ascAppId": "6400000000",
-        "appleTeamId": "XXXXXXXXXX"
       }
     }
   }
