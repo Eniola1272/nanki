@@ -38,7 +38,8 @@ if info.get('CFBundleSupportedPlatforms') != ['iPhoneOS']:
 bundle = app / 'main.jsbundle'
 if not bundle.is_file() or not bundle.stat().st_size:
     raise SystemExit('Release JavaScript bundle is missing; app would not work independently')
-subprocess.run(['lipo', '-verify_arch', 'arm64', str(app / info['CFBundleExecutable'])], check=True)
+# -verify_arch consumes all following arguments as architecture names.
+subprocess.run(['lipo', str(app / info['CFBundleExecutable']), '-verify_arch', 'arm64'], check=True)
 print(f"Verified device app, bundled JavaScript, minimum iOS {info['MinimumOSVersion']}")
 PY
 
