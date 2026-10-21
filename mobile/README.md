@@ -33,6 +33,55 @@ eas build --platform ios
 eas build --platform android
 ```
 
+## Personal iPhone installation from a cloud build
+
+The manual GitHub workflow **Build unsigned iPhone app** generates a Release IPA
+on `macos-26` with Xcode 26.4.1. It preserves the existing Expo SDK and bundle ID,
+generates native files through Expo, and embeds JavaScript so Metro is not needed.
+It requires no Apple signing credentials or Expo login in GitHub. This is a
+personal sideloading workflow, not App Store distribution. Its first successful
+cloud build and physical-device installation are still required to validate it.
+
+1. Push `.github/workflows/ios-unsigned.yml`, `mobile/scripts/build-unsigned-ios.sh`
+   and the mobile source to GitHub. The workflow must be on the default branch
+   before GitHub shows the manual **Run workflow** button.
+2. In the repository's **Actions** tab, choose **Build unsigned iPhone app**, then
+   **Run workflow**. It runs only when requested. GitHub-hosted macOS usage is
+   subject to your repository/account's Actions allowance and billing settings.
+3. After success, download the `Nanki-unsigned-iphone-…` artifact from the run and
+   unzip it to obtain `Nanki-unsigned.ipa`. A failed native build uploads its
+   `ios-build-log-…` artifact when a log exists.
+4. Download Sideloadly from https://sideloadly.io/ on your Mac. Connect and unlock
+   your iPhone, trust the computer, select the phone in Sideloadly, and open the IPA.
+5. Sign/install using your own Apple Account in Sideloadly. Complete Apple's
+   authentication prompts locally; do not put passwords, verification codes or
+   signing certificates in this repository or GitHub Actions.
+6. Follow any developer trust prompt in **Settings → General → VPN & Device
+   Management**. Enable **Settings → Privacy & Security → Developer Mode** when
+   requested, restart, and confirm. Launch Nanki.
+
+Free-account installations normally need refreshing within seven days. Keep the
+same signing account and installed bundle identifier when refreshing; uninstalling
+can erase downloaded content and unsynced progress. If the default identifier is
+unavailable, choose a unique identifier in Sideloadly and keep using it thereafter.
+Do not use its minimum-iOS override to force an incompatible app to install.
+
+The packaging script rejects a simulator build, a missing JavaScript bundle, or
+an app declaring a minimum iOS above 16.7. These checks do not replace a real
+iPhone 8 Plus launch test or verify every native dependency's runtime behavior.
+If the pinned Xcode version disappears from the runner, select a supported
+replacement after checking the runner's software inventory.
+
+For offline acceptance: sign in and download a quiz/deck while online; disconnect
+the Mac, enable airplane mode, force-close and reopen Nanki, finish a quiz and
+review cards, then reopen again to check saved progress. Restore internet and
+keep the app open until its pending count reaches zero. The Supabase migration
+described below must be applied for live sync to succeed.
+
+References: [GitHub macOS runner software](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md),
+[Expo native generation](https://docs.expo.dev/workflow/continuous-native-generation/),
+[Sideloadly installation and account support](https://sideloadly.io/).
+
 ## Offline study and sync
 
 Quizzes and decks have **Save offline**, **Update copy**, and **Remove download**
