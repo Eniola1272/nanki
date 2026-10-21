@@ -103,16 +103,17 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
 
   // Single choice selection
   const handleSelectOption = (optionIndex: number) => {
+    if (showExplanation || finishedRef.current) return;
     Haptics.selectionAsync();
     setSelectedAnswers((prev) => ({
       ...prev,
       [currentIndex]: optionIndex,
     }));
-    setShowExplanation(true);
   };
 
   // True/False branch selection
   const handleSelectTfBranch = (branchIndex: number, value: number) => {
+    if (showExplanation || finishedRef.current) return;
     Haptics.selectionAsync();
     setTfAnswers((prev) => {
       const qAnswers = prev[currentIndex] || {};
@@ -351,7 +352,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
   const selectedIdx = selectedAnswers[currentIndex];
   const currentTfAnswers = tfAnswers[currentIndex] || {};
   const hasAnswered = isTF
-    ? Object.keys(currentTfAnswers).length > 0
+    ? Object.values(currentTfAnswers).some((value) => value !== null)
     : selectedIdx !== undefined;
 
   const isTimeCritical = timeLeft <= 5;
@@ -438,6 +439,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
                     </Text>
                     <View style={styles.tfButtonRow}>
                       <Pressable
+                        disabled={showExplanation}
                         onPress={() => handleSelectTfBranch(bIdx, 1)}
                         style={({ pressed }) => [
                           styles.tfPill,
@@ -458,6 +460,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
                       </Pressable>
 
                       <Pressable
+                        disabled={showExplanation}
                         onPress={() => handleSelectTfBranch(bIdx, 0)}
                         style={({ pressed }) => [
                           styles.tfPill,
@@ -481,17 +484,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
                 );
               })}
 
-              {!showExplanation && (
-                <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowExplanation(true);
-                  }}
-                  style={styles.revealExplanationLink}
-                >
-                  <Text style={styles.revealExplanationText}>Check Explanations 💡</Text>
-                </Pressable>
-              )}
+
             </View>
           ) : (
             /* Render Mode: Multiple Choice Single Option */
@@ -503,7 +496,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
                 let optionStyle = styles.optionCard;
                 let dotStyle = styles.optionDot;
 
-                if (hasAnswered) {
+                if (showExplanation) {
                   if (isSelected && isCorrect) {
                     optionStyle = styles.optionCorrect;
                     dotStyle = styles.optionDotCorrect;
@@ -521,6 +514,7 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
                 return (
                   <Pressable
                     key={idx}
+                    disabled={showExplanation}
                     onPress={() => handleSelectOption(idx)}
                     style={({ pressed }) => [
                       optionStyle,
@@ -538,6 +532,18 @@ export const QuizPlayScreen: React.FC<QuizPlayScreenProps> = ({
               })}
             </View>
           )}
+
+              {!showExplanation && hasAnswered && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowExplanation(true);
+                  }}
+                  style={styles.revealExplanationLink}
+                >
+                  <Text style={styles.revealExplanationText}>Mark Answer</Text>
+                </Pressable>
+              )}
 
           {/* Clinical Explanation Card */}
           {showExplanation && (
